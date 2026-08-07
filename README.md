@@ -49,6 +49,24 @@ curl http://localhost:3000/sante
 
 La documentation OpenAPI est servie sur `http://localhost:3000/documentation`.
 
+### Premier compte
+
+Il n'existe pas d'inscription libre, et le premier compte ne peut donc pas être
+créé par l'API. Une commande d'amorçage crée les trois grades manquants et un
+compte super-admin :
+
+```bash
+npm run agent:super-admin -- 2291 Mathis Mercier
+```
+
+Elle affiche **une seule fois** un mot de passe provisoire ; le compte est en
+changement imposé à la première connexion. Le mot de passe n'est jamais passé en
+argument : il serait visible dans l'historique du shell et dans la liste des
+processus.
+
+Les arguments sont positionnels et non nommés — npm intercepte les options
+longues qu'il ne connaît pas, même après `--`.
+
 ### Variante — base en conteneur, API sur l'hôte
 
 Plus confortable pour déboguer :
@@ -57,6 +75,18 @@ Plus confortable pour déboguer :
 docker compose -f docker-compose.dev.yml up -d postgres
 npx prisma migrate deploy
 npm run start:dev
+```
+
+### Après l'ajout d'une dépendance
+
+Le `node_modules` du conteneur est un volume nommé, qui masque celui de l'image.
+Reconstruire l'image ne suffit pas : il faut aussi jeter le volume, sans quoi le
+conteneur compile contre les anciennes dépendances.
+
+```bash
+docker compose -f docker-compose.dev.yml down
+docker volume rm centrale-ni-dev_modules_api
+docker compose -f docker-compose.dev.yml up -d --build
 ```
 
 ---
@@ -105,9 +135,15 @@ le front.
 
 ```bash
 npm test           # unitaires
-npm run test:e2e   # intégration — nécessite la base démarrée
+npm run test:e2e   # intégration — nécessite PostgreSQL démarré
 npm run lint
 ```
+
+Les tests d'intégration tournent sur `centrale_ni_test`, base **distincte** de
+celle de développement : ils vident des tables. `npm run test:e2e` la crée si
+elle n'existe pas et y applique les migrations avant de lancer jest. La
+configuration correspondante est dans `.env.test`, versionné parce qu'il ne
+contient que des valeurs de test.
 
 ---
 
@@ -123,6 +159,13 @@ Le processus refuse de démarrer si l'une manque ou est mal formée.
 | `DATABASE_URL` | — | obligatoire |
 | `CORS_ORIGINES` | `http://localhost:3001` | liste séparée par des virgules |
 | `SWAGGER_ACTIF` | `true` | expose `/documentation` |
+| `JWT_SECRET` | — | obligatoire, 32 caractères minimum |
+| `JWT_DUREE` | `12h` | durée de validité d'un jeton |
+
+Toute variable ajoutée ici doit l'être aussi dans `docker-compose.dev.yml` : le
+conteneur voit le `.env` de l'hôte par le montage, mais ses propres variables le
+supplantent, et une variable oubliée y prendrait silencieusement une valeur
+prévue pour l'hôte.
 
 ---
 
@@ -136,12 +179,21 @@ prisma/
 scripts/
   creer-migration-sql.mjs
   generer-openapi.mjs
+  preparer-base-de-test.mjs
 src/
+  agents/                comptes, grades, catalogue des permissions
+  auth/                  connexion, jetons, gardes globaux
+  commandes/             amorçage d'une instance
   config/                validation de l'environnement
+  journal/               écriture d'audit
   prisma/                client partagé
   sante/                 route de santé
 test/                    tests d'intégration
 ```
+
+**Refus par défaut.** Une route qui ne déclare ni `@Publique()`, ni
+`@SansPermission()`, ni `@Permissions(...)` est refusée. Un test d'intégration
+monte un contrôleur volontairement non décoré pour le vérifier.
 
 Les conventions de développement et les règles métier à respecter sont dans
 `CLAUDE.md`.

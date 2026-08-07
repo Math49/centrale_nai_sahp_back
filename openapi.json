@@ -1,6 +1,449 @@
 {
   "openapi": "3.0.0",
   "paths": {
+    "/auth/login": {
+      "post": {
+        "operationId": "AuthController_connecter",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConnexionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JetonDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Identifiants invalides"
+          }
+        },
+        "summary": "Connexion par matricule et mot de passe",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/moi": {
+      "get": {
+        "operationId": "AuthController_moi",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentConnecteDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Identité et permissions de l'agent connecté",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/mot-de-passe": {
+      "post": {
+        "description": "Invalide tous les jetons de l'agent, y compris celui de l'appel : le jeton neuf renvoyé remplace le précédent.",
+        "operationId": "AuthController_changerMotDePasse",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangementMotDePasseDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JetonDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Changement de mot de passe",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/agents": {
+      "get": {
+        "operationId": "AgentsController_lister",
+        "parameters": [
+          {
+            "name": "anonymises",
+            "required": false,
+            "in": "query",
+            "description": "Inclure les comptes anonymisés",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AgentDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Liste des comptes",
+        "tags": [
+          "agents"
+        ]
+      },
+      "post": {
+        "description": "Il n'existe pas d'inscription libre. Le compte créé est en changement de mot de passe imposé.",
+        "operationId": "AgentsController_creer",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreationAgentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentAvecMotDePasseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Matricule déjà attribué"
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Création d'un compte",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/agents/{id}": {
+      "get": {
+        "operationId": "AgentsController_lire",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Fiche d'un compte",
+        "tags": [
+          "agents"
+        ]
+      },
+      "patch": {
+        "operationId": "AgentsController_modifier",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificationAgentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Modification d'un compte",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/agents/{id}/mot-de-passe": {
+      "post": {
+        "description": "Renvoie un mot de passe provisoire affiché une seule fois, révoque les jetons et repasse le compte en changement imposé.",
+        "operationId": "AgentsController_reinitialiserMotDePasse",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentAvecMotDePasseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Réinitialisation du mot de passe",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/agents/{id}/anonymiser": {
+      "post": {
+        "description": "Efface les données personnelles, conserve l'enregistrement et ses références, révoque les jetons. Irréversible.",
+        "operationId": "AgentsController_anonymiser",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Déjà anonymisé, ou dernier super-admin"
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Anonymisation — seule forme de retrait d'un compte",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/roles": {
+      "get": {
+        "description": "Lisible par tout agent connecté : savoir ce qu'un grade autorise ne révèle rien sur les données.",
+        "operationId": "RolesController_lister",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RoleDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Grades et leurs permissions",
+        "tags": [
+          "roles"
+        ]
+      }
+    },
+    "/roles/catalogue-permissions": {
+      "get": {
+        "operationId": "RolesController_catalogue",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PermissionCatalogueeDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Catalogue des permissions attribuables",
+        "tags": [
+          "roles"
+        ]
+      }
+    },
+    "/roles/{id}": {
+      "patch": {
+        "operationId": "RolesController_modifier",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificationRoleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Configuration d'un grade",
+        "tags": [
+          "roles"
+        ]
+      }
+    },
     "/sante": {
       "get": {
         "operationId": "SanteController_lire",
@@ -51,6 +494,332 @@
       }
     },
     "schemas": {
+      "ConnexionDto": {
+        "type": "object",
+        "properties": {
+          "matricule": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "example": "2291"
+          },
+          "motDePasse": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "matricule",
+          "motDePasse"
+        ]
+      },
+      "AgentConnecteDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "matricule": {
+            "type": "string"
+          },
+          "prenom": {
+            "type": "string"
+          },
+          "nom": {
+            "type": "string"
+          },
+          "roleCode": {
+            "type": "string"
+          },
+          "superAdmin": {
+            "type": "boolean"
+          },
+          "doitChangerMdp": {
+            "type": "boolean",
+            "description": "Tant qu'il vaut true, seules /auth/moi et /auth/mot-de-passe répondent"
+          },
+          "permissions": {
+            "description": "Codes de permissions du grade. Un super-admin contourne ce jeu.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "matricule",
+          "prenom",
+          "nom",
+          "roleCode",
+          "superAdmin",
+          "doitChangerMdp",
+          "permissions"
+        ]
+      },
+      "JetonDto": {
+        "type": "object",
+        "properties": {
+          "jeton": {
+            "type": "string",
+            "description": "À placer en en-tête Authorization: Bearer …"
+          },
+          "agent": {
+            "$ref": "#/components/schemas/AgentConnecteDto"
+          }
+        },
+        "required": [
+          "jeton",
+          "agent"
+        ]
+      },
+      "ChangementMotDePasseDto": {
+        "type": "object",
+        "properties": {
+          "ancien": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "nouveau": {
+            "type": "string",
+            "minLength": 12,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "ancien",
+          "nouveau"
+        ]
+      },
+      "AgentDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "matricule": {
+            "type": "string",
+            "description": "Valeur technique dérivée de l'id chez un compte anonymisé"
+          },
+          "prenom": {
+            "type": "string",
+            "description": "Vide chez un compte anonymisé"
+          },
+          "nom": {
+            "type": "string",
+            "description": "Vide chez un compte anonymisé"
+          },
+          "libelle": {
+            "type": "string",
+            "description": "Prêt à l'affichage — « agent supprimé » si anonymisé"
+          },
+          "roleId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "roleCode": {
+            "type": "string"
+          },
+          "roleLibelle": {
+            "type": "string"
+          },
+          "superAdmin": {
+            "type": "boolean"
+          },
+          "actif": {
+            "type": "boolean"
+          },
+          "doitChangerMdp": {
+            "type": "boolean"
+          },
+          "anonymise": {
+            "type": "boolean"
+          },
+          "anonymiseLe": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "creeLe": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "matricule",
+          "prenom",
+          "nom",
+          "libelle",
+          "roleId",
+          "roleCode",
+          "roleLibelle",
+          "superAdmin",
+          "actif",
+          "doitChangerMdp",
+          "anonymise",
+          "anonymiseLe",
+          "creeLe"
+        ]
+      },
+      "CreationAgentDto": {
+        "type": "object",
+        "properties": {
+          "matricule": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9-]+$",
+            "example": "2291"
+          },
+          "prenom": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "example": "Isadora"
+          },
+          "nom": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "example": "Morales"
+          },
+          "roleId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "superAdmin": {
+            "type": "boolean",
+            "description": "Attribut du compte, indépendant du grade RP",
+            "default": false
+          },
+          "motDePasse": {
+            "type": "string",
+            "minLength": 12,
+            "maxLength": 256,
+            "description": "Laisser vide pour qu'un mot de passe provisoire soit engendré et renvoyé une seule fois"
+          }
+        },
+        "required": [
+          "matricule",
+          "prenom",
+          "nom",
+          "roleId"
+        ]
+      },
+      "AgentAvecMotDePasseDto": {
+        "type": "object",
+        "properties": {
+          "agent": {
+            "$ref": "#/components/schemas/AgentDto"
+          },
+          "motDePasseProvisoire": {
+            "type": "string",
+            "nullable": true,
+            "description": "Mot de passe provisoire, affiché une seule fois. Le compte est en changement imposé."
+          }
+        },
+        "required": [
+          "agent",
+          "motDePasseProvisoire"
+        ]
+      },
+      "ModificationAgentDto": {
+        "type": "object",
+        "properties": {
+          "prenom": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "nom": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "roleId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "actif": {
+            "type": "boolean"
+          },
+          "superAdmin": {
+            "type": "boolean"
+          }
+        }
+      },
+      "RoleDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string",
+            "example": "senior_investigator"
+          },
+          "libelle": {
+            "type": "string",
+            "example": "Senior Investigator"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ordre": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "libelle",
+          "permissions",
+          "ordre"
+        ]
+      },
+      "PermissionCatalogueeDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "entite.archiver"
+          },
+          "libelle": {
+            "type": "string",
+            "example": "Archiver une entité"
+          }
+        },
+        "required": [
+          "code",
+          "libelle"
+        ]
+      },
+      "ModificationRoleDto": {
+        "type": "object",
+        "properties": {
+          "libelle": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "permissions": {
+            "uniqueItems": true,
+            "description": "Jeu complet, il remplace le précédent",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "SanteReponseDto": {
         "type": "object",
         "properties": {

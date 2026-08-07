@@ -6,6 +6,9 @@ coverage/
 .env
 .env.*
 !.env.example
+# Versionné : il ne contient que des valeurs de test, et les tests d'intégration
+# ne tournent pas sans lui.
+!.env.test
 
 npm-debug.log*
 .DS_Store

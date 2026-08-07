@@ -33,6 +33,15 @@ export const schemaEnvironnement = z.object({
     .enum(['true', 'false'])
     .default('true')
     .transform((valeur) => valeur === 'true'),
+
+  /** Secret de signature des JWT. Aucune valeur par défaut : un secret
+   *  d'exemple oublié en production ouvrirait tous les comptes. */
+  JWT_SECRET: z
+    .string()
+    .min(32, 'au moins 32 caractères — ce secret ouvre tous les comptes'),
+
+  /** Durée de validité d'un jeton, au format accepté par @nestjs/jwt. */
+  JWT_DUREE: z.string().default('12h'),
 });
 
 export type Environnement = z.infer<typeof schemaEnvironnement>;

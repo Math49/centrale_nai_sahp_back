@@ -35,6 +35,10 @@ services:
       DATABASE_URL: postgresql://ni:ni@postgres:5432/centrale_ni?schema=public
       CORS_ORIGINES: http://localhost:3001
       SWAGGER_ACTIF: 'true'
+      # Secret de développement, sans valeur : la production reçoit le sien
+      # par le fichier d'environnement du serveur (lot 12).
+      JWT_SECRET: developpement-uniquement-secret-sans-valeur-32c
+      JWT_DUREE: 12h
     ports:
       - '3000:3000'
     volumes:

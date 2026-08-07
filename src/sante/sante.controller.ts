@@ -2,18 +2,21 @@ import { Controller, Get, HttpCode, HttpStatus, Res } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 
+import { Publique } from '../auth/decorateurs';
 import { PrismaService } from '../prisma/prisma.service';
 import { SanteReponseDto } from './sante.dto';
 
 /**
  * Route de santé.
  *
- * Seule route publique du projet, et seule exception à la règle « une route
- * sans décorateur de permission est refusée » qui entrera en vigueur au lot 1.
- * L'exception y sera inscrite en dur et testée.
+ * Avec la connexion, l'une des deux seules routes publiques du projet. Le
+ * `@Publique()` ci-dessous est une exception explicite à la règle du refus par
+ * défaut : une sonde d'infrastructure ne détient pas de jeton. Il ne divulgue
+ * rien de plus que l'existence du service et l'état de sa base.
  */
 @ApiTags('sante')
 @Controller('sante')
+@Publique()
 export class SanteController {
   private readonly demarrage = Date.now();
 

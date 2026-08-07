@@ -2,6 +2,7 @@ import { validerEnvironnement } from './environnement';
 
 const minimal = {
   DATABASE_URL: 'postgresql://ni:ni@localhost:5432/centrale_ni',
+  JWT_SECRET: 'secret-de-test-assez-long-pour-passer-le-seuil',
 };
 
 describe('validerEnvironnement', () => {
@@ -21,9 +22,21 @@ describe('validerEnvironnement', () => {
   });
 
   it("refuse une DATABASE_URL qui n'est pas une URL", () => {
-    expect(() => validerEnvironnement({ DATABASE_URL: 'centrale_ni' })).toThrow(
-      /DATABASE_URL/,
-    );
+    expect(() =>
+      validerEnvironnement({ ...minimal, DATABASE_URL: 'centrale_ni' }),
+    ).toThrow(/DATABASE_URL/);
+  });
+
+  it('refuse de démarrer sans JWT_SECRET', () => {
+    expect(() =>
+      validerEnvironnement({ DATABASE_URL: minimal.DATABASE_URL }),
+    ).toThrow(/JWT_SECRET/);
+  });
+
+  it('refuse un JWT_SECRET trop court', () => {
+    expect(() =>
+      validerEnvironnement({ ...minimal, JWT_SECRET: 'trop-court' }),
+    ).toThrow(/JWT_SECRET/);
   });
 
   it('convertit PORT en nombre', () => {

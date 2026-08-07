@@ -109,6 +109,13 @@ pas. Ne pas tenter de l'empêcher — toute contre-mesure révélerait l'entité
   efface les données personnelles, conserve l'enregistrement, réécrit
   `matricule` en valeur technique dérivée de l'`id` — jamais `NULL`, la colonne
   est unique — et incrémente `token_version`.
+- **Le journal désigne un agent par son `id`, jamais par son matricule ni son
+  nom.** Une trace qui recopierait ces valeurs les rendrait relisibles après une
+  anonymisation, qui perdrait alors son sens. Un test le vérifie.
+- **`journal_audit.id` est un `bigserial`**, que `JSON.stringify` ne sait pas
+  sérialiser. Les DTO du lot 11 devront le convertir explicitement.
+- **npm intercepte les options longues qu'il ne connaît pas**, même après `--`.
+  Les commandes lancées par `npm run` prennent des arguments positionnels.
 
 ---
 
@@ -123,24 +130,50 @@ pas. Ne pas tenter de l'empêcher — toute contre-mesure révélerait l'entité
 - **Règle de déploiement** : quand le contrat change, le back se déploie avant
   le front.
 
+## Permissions et gardes
+
+Deux gardes globaux, dans cet ordre : `GardeAuthentification` résout l'agent en
+le **relisant en base à chaque requête** — c'est ce qui rend `token_version`,
+`actif` et `anonymise` immédiatement opposables — puis `GardePermission` décide.
+
+Quatre décorateurs, et un seul défaut :
+
+| Décorateur | Effet |
+| --- | --- |
+| `@Publique()` | Sans jeton. Réservé à `/sante` et `/auth/login` |
+| `@Permissions(...)` | Toutes les permissions listées sont exigées |
+| `@SansPermission()` | Authentifié, sans permission particulière — déclaration explicite |
+| `@AutoriseeEnChangementImpose()` | Joignable par un compte en changement de mot de passe imposé |
+| *rien* | **Refusé** |
+
+Le catalogue vit dans `src/agents/permissions.ts`. Il reprend la conception
+§6.7, plus `agent.gerer` et `role.gerer` : le catalogue accordait
+`agent.anonymiser` à l'État-Major, lui refuser la création d'un compte tout en
+lui permettant d'en retirer un aurait été incohérent.
+
 ## Commandes
 
 ```bash
 docker compose -f docker-compose.dev.yml up      # base + API
 npm run start:dev                                # API seule, base en conteneur
+npm run agent:super-admin -- <matricule> <prénom> <nom>
 npm test                                         # tests unitaires
-npm run test:e2e                                 # tests d'intégration, base requise
+npm run test:e2e                                 # intégration, base de test dédiée
 npm run lint
 npx prisma migrate dev                           # migrations déclaratives
 npm run sql:migration -- <nom> prisma/sql/...    # migrations de triggers et index
 ```
+
+Les tests d'intégration tournent sur `centrale_ni_test`, base distincte de celle
+de développement : ils vident des tables. `npm run test:e2e` la crée et y
+applique les migrations avant de lancer jest.
 
 ## Avancement
 
 | Lot | État |
 | --- | --- |
 | 0 — Socle technique | fait |
-| 1 — Authentification et agents | à faire |
+| 1 — Authentification et agents | fait |
 | 3 — Référentiel | à faire |
 | 4 — Entités et faits | à faire |
 | 5 — Visibilité et permissions | à faire |

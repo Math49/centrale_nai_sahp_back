@@ -17,5 +17,74 @@ datasource db {
   extensions = [pg_trgm, unaccent]
 }
 
-// Les modèles arrivent au lot 1 (role, agent) puis au lot 3 (référentiel)
-// et au lot 4 (entite, fait, fichier, valeur_unique).
+// Les modèles du référentiel arrivent au lot 3, ceux du cœur au lot 4.
+
+/// Grade RP porteur d'un jeu de permissions entièrement configurable.
+/// Les trois grades sont fixes ; leurs permissions ne le sont pas.
+model Role {
+  id          String   @id @default(uuid()) @db.Uuid
+  code        String   @unique
+  libelle     String
+  permissions String[]
+  ordre       Int      @default(0)
+
+  agents Agent[]
+
+  @@map("role")
+}
+
+/// Compte agent. N'est jamais supprimé — voir l'anonymisation, seule forme de
+/// retrait compatible avec l'invariant « rien n'est jamais supprimé ».
+model Agent {
+  id        String @id @default(uuid()) @db.Uuid
+  /// Unique. Réécrit en valeur technique dérivée de l'id à l'anonymisation,
+  /// jamais mis à NULL, afin de libérer le matricule d'origine.
+  matricule String @unique
+  prenom    String
+  nom       String
+
+  roleId String @map("role_id") @db.Uuid
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  /// Indépendant du grade RP. Contournement câblé en dur, non configurable.
+  superAdmin Boolean @default(false) @map("super_admin")
+  actif      Boolean @default(true)
+
+  /// Nul chez un compte anonymisé : aucun mot de passe ne peut alors
+  /// correspondre, l'authentification devient structurellement impossible.
+  motDePasseHash String? @map("mot_de_passe_hash")
+  doitChangerMdp Boolean @default(true) @map("doit_changer_mdp")
+
+  /// Incrémenté pour invalider immédiatement tous les jetons émis.
+  tokenVersion Int @default(0) @map("token_version")
+
+  anonymise   Boolean   @default(false)
+  anonymiseLe DateTime? @map("anonymise_le") @db.Timestamptz(6)
+
+  creeLe DateTime @default(now()) @map("cree_le") @db.Timestamptz(6)
+
+  entreesJournalAudit JournalAudit[] @relation("auteur_audit")
+
+  @@map("agent")
+}
+
+/// Journal d'audit. L'intercepteur générique arrive au lot 11 ; le lot 1 n'y
+/// écrit que les gestes d'administration des comptes, dont l'anonymisation.
+model JournalAudit {
+  id BigInt @id @default(autoincrement())
+
+  agentId String? @map("agent_id") @db.Uuid
+  agent   Agent?  @relation("auteur_audit", fields: [agentId], references: [id], onDelete: Restrict)
+
+  action     String
+  cibleTable String  @map("cible_table")
+  cibleId    String? @map("cible_id") @db.Uuid
+  avant      Json?
+  apres      Json?
+
+  effectueLe DateTime @default(now()) @map("effectue_le") @db.Timestamptz(6)
+
+  @@index([cibleTable, cibleId])
+  @@index([effectueLe])
+  @@map("journal_audit")
+}
