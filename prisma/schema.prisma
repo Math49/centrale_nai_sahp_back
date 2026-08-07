@@ -1,0 +1,21 @@
+// Centrale N&I — schéma Prisma
+//
+// AVERTISSEMENT — ce fichier ne décrit PAS toute la base.
+// Les triggers, vues et index partiels vivent dans prisma/sql/ et sont
+// recopiés dans les migrations. Prisma ne les connaît pas : un
+// `prisma db pull` les ignore et un `prisma migrate dev` peut proposer
+// de les écraser. Voir prisma/sql/README.md et le CLAUDE.md du dépôt.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pg_trgm, unaccent]
+}
+
+// Les modèles arrivent au lot 1 (role, agent) puis au lot 3 (référentiel)
+// et au lot 4 (entite, fait, fichier, valeur_unique).

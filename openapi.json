@@ -1,0 +1,92 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/sante": {
+      "get": {
+        "operationId": "SanteController_lire",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SanteReponseDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Base injoignable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SanteReponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "État de l'API et de sa base",
+        "tags": [
+          "sante"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Centrale N&I",
+    "description": "API du service Narcotics & Investigations de la SAHP. Le référentiel — types d'entités, champs, types de liens, onglets — est dynamique et n'apparaît pas dans ce contrat : il se récupère par GET /referentiel.",
+    "version": "0.1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "jeton": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "SanteReponseDto": {
+        "type": "object",
+        "properties": {
+          "etat": {
+            "enum": [
+              "operationnel",
+              "degrade"
+            ],
+            "type": "string",
+            "description": "« degrade » dès que la base ne répond pas"
+          },
+          "version": {
+            "type": "string",
+            "description": "Version du paquet applicatif"
+          },
+          "base": {
+            "type": "boolean",
+            "description": "La base PostgreSQL répond"
+          },
+          "demarre_depuis": {
+            "type": "number",
+            "description": "Secondes écoulées depuis le démarrage"
+          },
+          "horodatage": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "etat",
+          "version",
+          "base",
+          "demarre_depuis",
+          "horodatage"
+        ]
+      }
+    }
+  }
+}
