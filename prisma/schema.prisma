@@ -17,7 +17,131 @@ datasource db {
   extensions = [pg_trgm, unaccent]
 }
 
-// Les modèles du référentiel arrivent au lot 3, ceux du cœur au lot 4.
+// Les modèles du cœur — entite, fait, fichier, valeur_unique — arrivent au lot 4.
+
+// ───────────────────────────── Référentiel ─────────────────────────────
+//
+// Configuration du modèle métier, réservée au super-admin. Les enquêteurs
+// créent des entités et des faits, jamais des types ni des champs.
+
+enum TypeDonnee {
+  texte
+  nombre
+  date
+  datetime
+  booleen
+  liste
+  fichier
+
+  @@map("type_donnee")
+}
+
+enum SensLien {
+  direct
+  inverse
+
+  @@map("sens_lien")
+}
+
+model TypeEntite {
+  id             String @id @default(uuid()) @db.Uuid
+  code           String @unique
+  libelle        String
+  libellePluriel String @map("libelle_pluriel")
+  icone          String
+
+  /// Gabarit de libellé — « {prenom} {nom} », « {plaque} ». Évite de coder en
+  /// dur la façon de nommer chaque type d'entité.
+  modeleLibelle String @map("modele_libelle")
+
+  ordre Int @default(0)
+
+  champs  DefinitionChamp[]
+  onglets Onglet[]
+
+  liensEnSource TypeLien[] @relation("type_lien_source")
+  liensEnCible  TypeLien[] @relation("type_lien_cible")
+
+  @@map("type_entite")
+}
+
+model DefinitionChamp {
+  id String @id @default(uuid()) @db.Uuid
+
+  typeEntiteId String     @map("type_entite_id") @db.Uuid
+  typeEntite   TypeEntite @relation(fields: [typeEntiteId], references: [id], onDelete: Cascade)
+
+  cle         String
+  libelle     String
+  typeDonnee  TypeDonnee @map("type_donnee")
+  obligatoire Boolean    @default(false)
+  estUnique   Boolean    @default(false) @map("est_unique")
+  multiple    Boolean    @default(false)
+
+  /// Valeurs autorisées d'une liste fermée. Nul pour les autres types.
+  options Json?
+
+  ordre Int @default(0)
+
+  @@unique([typeEntiteId, cle])
+  @@map("definition_champ")
+}
+
+/// Type de lien, spécifique plutôt que générique : « interpellé lors de »,
+/// « présent lors de », « témoin de ». La nuance est exploitable par le graphe
+/// et par les filtres, ce qu'un texte libre ne permettrait pas.
+model TypeLien {
+  id             String @id @default(uuid()) @db.Uuid
+  code           String @unique
+  libelle        String
+  libelleInverse String @map("libelle_inverse")
+
+  /// Contraintes de domaine : « interpellé lors de » va de Personne vers
+  /// Événement, et nulle part ailleurs.
+  typeEntiteSourceId String     @map("type_entite_source_id") @db.Uuid
+  typeEntiteSource   TypeEntite @relation("type_lien_source", fields: [typeEntiteSourceId], references: [id], onDelete: Restrict)
+
+  typeEntiteCibleId String     @map("type_entite_cible_id") @db.Uuid
+  typeEntiteCible   TypeEntite @relation("type_lien_cible", fields: [typeEntiteCibleId], references: [id], onDelete: Restrict)
+
+  multiple Boolean @default(true)
+  ordre    Int     @default(0)
+
+  onglets OngletTypeLien[]
+
+  @@map("type_lien")
+}
+
+model Onglet {
+  id String @id @default(uuid()) @db.Uuid
+
+  typeEntiteId String     @map("type_entite_id") @db.Uuid
+  typeEntite   TypeEntite @relation(fields: [typeEntiteId], references: [id], onDelete: Cascade)
+
+  libelle String
+  ordre   Int    @default(0)
+
+  typesLiens OngletTypeLien[]
+
+  @@map("onglet")
+}
+
+/// Composition d'un onglet. Le `sens` est indispensable : l'onglet Membres du
+/// groupe affiche le côté **inverse** du lien « membre de », qui va de la
+/// personne vers le groupe.
+model OngletTypeLien {
+  ongletId String @map("onglet_id") @db.Uuid
+  onglet   Onglet @relation(fields: [ongletId], references: [id], onDelete: Cascade)
+
+  typeLienId String   @map("type_lien_id") @db.Uuid
+  typeLien   TypeLien @relation(fields: [typeLienId], references: [id], onDelete: Cascade)
+
+  sens  SensLien
+  ordre Int      @default(0)
+
+  @@id([ongletId, typeLienId, sens])
+  @@map("onglet_type_lien")
+}
 
 /// Grade RP porteur d'un jeu de permissions entièrement configurable.
 /// Les trois grades sont fixes ; leurs permissions ne le sont pas.

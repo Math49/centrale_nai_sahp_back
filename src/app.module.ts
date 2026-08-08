@@ -5,11 +5,11 @@ import { AuthModule } from './auth/auth.module';
 import { ConfigurationModule } from './config/configuration.module';
 import { JournalModule } from './journal/journal.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { ReferentielModule } from './referentiel/referentiel.module';
 import { SanteModule } from './sante/sante.module';
 
 /**
  * Modules métier à venir, dans l'ordre des lots :
- *   lot 3  referentiel
  *   lot 4  entites, faits, fichiers
  *   lot 5  visibilite  (service transversal, sans route)
  *   lot 8  dossiers
@@ -24,6 +24,7 @@ import { SanteModule } from './sante/sante.module';
     JournalModule,
     AuthModule,
     AgentsModule,
+    ReferentielModule,
     SanteModule,
   ],
 })

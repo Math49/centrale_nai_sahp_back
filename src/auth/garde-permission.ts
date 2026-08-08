@@ -12,6 +12,7 @@ import {
   CLE_PERMISSIONS,
   CLE_PUBLIQUE,
   CLE_SANS_PERMISSION,
+  CLE_SUPER_ADMIN,
 } from './decorateurs';
 
 /**
@@ -39,6 +40,17 @@ export class GardePermission implements CanActivate {
       return true;
     }
 
+    const requete = contexte.switchToHttp().getRequest<RequeteAuthentifiee>();
+
+    // Réservé au super-admin, câblé en dur : aucune permission n'ouvre cette
+    // porte, pas même une permission qu'un grade s'accorderait lui-même.
+    if (this.reflector.getAllAndOverride<boolean>(CLE_SUPER_ADMIN, cibles)) {
+      if (!requete.agent?.superAdmin) {
+        throw new ForbiddenException('réservé au super-admin');
+      }
+      return true;
+    }
+
     const requises = this.reflector.getAllAndOverride<Permission[]>(
       CLE_PERMISSIONS,
       cibles,
@@ -50,7 +62,6 @@ export class GardePermission implements CanActivate {
       );
     }
 
-    const requete = contexte.switchToHttp().getRequest<RequeteAuthentifiee>();
     const agent = requete.agent;
 
     if (!agent) {

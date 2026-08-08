@@ -444,6 +444,663 @@
         ]
       }
     },
+    "/referentiel": {
+      "get": {
+        "operationId": "ReferentielController_catalogue",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReferentielDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Catalogue complet en une requête",
+        "tags": [
+          "referentiel"
+        ]
+      }
+    },
+    "/referentiel/types-entites": {
+      "post": {
+        "operationId": "ReferentielController_creerTypeEntite",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreationTypeEntiteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TypeEntiteDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Création d'un type d'entité",
+        "tags": [
+          "referentiel"
+        ]
+      }
+    },
+    "/referentiel/types-entites/{id}": {
+      "patch": {
+        "operationId": "ReferentielController_modifierTypeEntite",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificationTypeEntiteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TypeEntiteDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "tags": [
+          "referentiel"
+        ]
+      },
+      "delete": {
+        "description": "Refusée dès qu'une entité de ce type existe : le référentiel ne se vide pas sous les données qui en dépendent.",
+        "operationId": "ReferentielController_supprimerTypeEntite",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "409": {
+            "description": "Type encore utilisé"
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Suppression d'un type d'entité",
+        "tags": [
+          "referentiel"
+        ]
+      }
+    },
+    "/referentiel/types-entites/ordre": {
+      "post": {
+        "operationId": "ReferentielController_ordonnerTypesEntites",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrdreDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Ordre d'affichage des types d'entités",
+        "tags": [
+          "referentiel"
+        ]
+      }
+    },
+    "/referentiel/types-entites/apercu-gabarit": {
+      "post": {
+        "description": "Vérifie sa forme et montre ce qu'il produirait.",
+        "operationId": "ReferentielController_apercuGabarit",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApercuGabaritDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultatApercuDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Aperçu d'un gabarit de libellé",
+        "tags": [
+          "referentiel"
+        ]
+      }
+    },
+    "/referentiel/champs": {
+      "post": {
+        "operationId": "ReferentielController_creerChamp",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreationChampDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefinitionChampDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "tags": [
+          "referentiel"
+        ]
+      }
+    },
+    "/referentiel/champs/{id}": {
+      "patch": {
+        "operationId": "ReferentielController_modifierChamp",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificationChampDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefinitionChampDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "tags": [
+          "referentiel"
+        ]
+      },
+      "delete": {
+        "operationId": "ReferentielController_supprimerChamp",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "tags": [
+          "referentiel"
+        ]
+      }
+    },
+    "/referentiel/types-entites/{id}/champs/ordre": {
+      "post": {
+        "operationId": "ReferentielController_ordonnerChamps",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrdreDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "tags": [
+          "referentiel"
+        ]
+      }
+    },
+    "/referentiel/types-liens": {
+      "post": {
+        "description": "Ses contraintes de domaine sont définitives : des liens déjà posés les respectent.",
+        "operationId": "ReferentielController_creerTypeLien",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreationTypeLienDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TypeLienDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Création d'un type de lien",
+        "tags": [
+          "referentiel"
+        ]
+      }
+    },
+    "/referentiel/types-liens/{id}": {
+      "patch": {
+        "operationId": "ReferentielController_modifierTypeLien",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificationTypeLienDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TypeLienDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "tags": [
+          "referentiel"
+        ]
+      },
+      "delete": {
+        "operationId": "ReferentielController_supprimerTypeLien",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "tags": [
+          "referentiel"
+        ]
+      }
+    },
+    "/referentiel/onglets": {
+      "post": {
+        "operationId": "ReferentielController_creerOnglet",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreationOngletDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OngletDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "tags": [
+          "referentiel"
+        ]
+      }
+    },
+    "/referentiel/onglets/{id}": {
+      "patch": {
+        "operationId": "ReferentielController_modifierOnglet",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificationOngletDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OngletDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "tags": [
+          "referentiel"
+        ]
+      },
+      "delete": {
+        "operationId": "ReferentielController_supprimerOnglet",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "tags": [
+          "referentiel"
+        ]
+      }
+    },
+    "/referentiel/types-entites/{id}/onglets/ordre": {
+      "post": {
+        "operationId": "ReferentielController_ordonnerOnglets",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrdreDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "tags": [
+          "referentiel"
+        ]
+      }
+    },
+    "/referentiel/onglets/{id}/types-liens": {
+      "put": {
+        "description": "Jeu complet, dans l'ordre. Le sens doit placer le type d'entité de l'onglet du bon côté du lien.",
+        "operationId": "ReferentielController_composerOnglet",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompositionOngletDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OngletDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Sens incohérent avec le domaine du lien"
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Composition d'un onglet",
+        "tags": [
+          "referentiel"
+        ]
+      }
+    },
     "/sante": {
       "get": {
         "operationId": "SanteController_lire",
@@ -819,6 +1476,579 @@
             }
           }
         }
+      },
+      "DefinitionChampDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "typeEntiteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cle": {
+            "type": "string",
+            "example": "plaque"
+          },
+          "libelle": {
+            "type": "string",
+            "example": "Plaque"
+          },
+          "typeDonnee": {
+            "enum": [
+              "texte",
+              "nombre",
+              "date",
+              "datetime",
+              "booleen",
+              "liste",
+              "fichier"
+            ],
+            "type": "string"
+          },
+          "obligatoire": {
+            "type": "boolean"
+          },
+          "estUnique": {
+            "type": "boolean"
+          },
+          "multiple": {
+            "type": "boolean"
+          },
+          "options": {
+            "nullable": true,
+            "description": "Valeurs autorisées, pour une liste fermée uniquement",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ordre": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "typeEntiteId",
+          "cle",
+          "libelle",
+          "typeDonnee",
+          "obligatoire",
+          "estUnique",
+          "multiple",
+          "options",
+          "ordre"
+        ]
+      },
+      "OngletTypeLienDto": {
+        "type": "object",
+        "properties": {
+          "typeLienId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sens": {
+            "enum": [
+              "direct",
+              "inverse"
+            ],
+            "type": "string",
+            "description": "« inverse » affiche le lien vu de l'autre extrémité : l'onglet Membres du groupe montre le côté inverse de « membre de »"
+          },
+          "ordre": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "typeLienId",
+          "sens",
+          "ordre"
+        ]
+      },
+      "OngletDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "typeEntiteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "libelle": {
+            "type": "string",
+            "example": "Membres"
+          },
+          "ordre": {
+            "type": "number"
+          },
+          "typesLiens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OngletTypeLienDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "typeEntiteId",
+          "libelle",
+          "ordre",
+          "typesLiens"
+        ]
+      },
+      "TypeEntiteDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string",
+            "example": "vehicule"
+          },
+          "libelle": {
+            "type": "string",
+            "example": "Véhicule"
+          },
+          "libellePluriel": {
+            "type": "string",
+            "example": "Véhicules"
+          },
+          "icone": {
+            "type": "string",
+            "example": "car"
+          },
+          "modeleLibelle": {
+            "type": "string",
+            "example": "{plaque}"
+          },
+          "ordre": {
+            "type": "number"
+          },
+          "champs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DefinitionChampDto"
+            }
+          },
+          "onglets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OngletDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "libelle",
+          "libellePluriel",
+          "icone",
+          "modeleLibelle",
+          "ordre",
+          "champs",
+          "onglets"
+        ]
+      },
+      "TypeLienDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string",
+            "example": "proprietaire_de"
+          },
+          "libelle": {
+            "type": "string",
+            "example": "propriétaire de"
+          },
+          "libelleInverse": {
+            "type": "string",
+            "example": "appartient à"
+          },
+          "typeEntiteSourceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "typeEntiteCibleId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "multiple": {
+            "type": "boolean"
+          },
+          "ordre": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "libelle",
+          "libelleInverse",
+          "typeEntiteSourceId",
+          "typeEntiteCibleId",
+          "multiple",
+          "ordre"
+        ]
+      },
+      "ReferentielDto": {
+        "type": "object",
+        "properties": {
+          "typesEntites": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TypeEntiteDto"
+            }
+          },
+          "typesLiens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TypeLienDto"
+            }
+          }
+        },
+        "required": [
+          "typesEntites",
+          "typesLiens"
+        ]
+      },
+      "CreationTypeEntiteDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "maxLength": 64,
+            "example": "vehicule"
+          },
+          "libelle": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "example": "Véhicule"
+          },
+          "libellePluriel": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "example": "Véhicules"
+          },
+          "icone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "example": "car",
+            "description": "Nom d'icône du design system"
+          },
+          "modeleLibelle": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "example": "{plaque}",
+            "description": "Gabarit de libellé, citant des clés de champs entre accolades"
+          }
+        },
+        "required": [
+          "code",
+          "libelle",
+          "libellePluriel",
+          "icone",
+          "modeleLibelle"
+        ]
+      },
+      "ModificationTypeEntiteDto": {
+        "type": "object",
+        "properties": {
+          "libelle": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "libellePluriel": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "icone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "modeleLibelle": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        }
+      },
+      "OrdreDto": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "uniqueItems": true,
+            "minItems": 1,
+            "description": "Identifiants dans l'ordre voulu. Le jeu doit être complet.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "ids"
+        ]
+      },
+      "ApercuGabaritDto": {
+        "type": "object",
+        "properties": {
+          "modeleLibelle": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "example": "{prenom} {nom}"
+          }
+        },
+        "required": [
+          "modeleLibelle"
+        ]
+      },
+      "ResultatApercuDto": {
+        "type": "object",
+        "properties": {
+          "apercu": {
+            "type": "string",
+            "example": "Tyron Banks"
+          },
+          "clesCitees": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "apercu",
+          "clesCitees"
+        ]
+      },
+      "CreationChampDto": {
+        "type": "object",
+        "properties": {
+          "typeEntiteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cle": {
+            "type": "string",
+            "maxLength": 64,
+            "example": "plaque"
+          },
+          "libelle": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "example": "Plaque"
+          },
+          "typeDonnee": {
+            "enum": [
+              "texte",
+              "nombre",
+              "date",
+              "datetime",
+              "booleen",
+              "liste",
+              "fichier"
+            ],
+            "type": "string"
+          },
+          "obligatoire": {
+            "type": "boolean",
+            "default": false
+          },
+          "estUnique": {
+            "type": "boolean",
+            "default": false
+          },
+          "multiple": {
+            "type": "boolean",
+            "default": false
+          },
+          "options": {
+            "minItems": 1,
+            "uniqueItems": true,
+            "description": "Obligatoire et réservé au type « liste »",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "typeEntiteId",
+          "cle",
+          "libelle",
+          "typeDonnee"
+        ]
+      },
+      "ModificationChampDto": {
+        "type": "object",
+        "properties": {
+          "libelle": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "obligatoire": {
+            "type": "boolean"
+          },
+          "estUnique": {
+            "type": "boolean"
+          },
+          "multiple": {
+            "type": "boolean"
+          },
+          "options": {
+            "minItems": 1,
+            "uniqueItems": true,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "CreationTypeLienDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "maxLength": 64,
+            "example": "proprietaire_de"
+          },
+          "libelle": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "example": "propriétaire de"
+          },
+          "libelleInverse": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "example": "appartient à",
+            "description": "Le même lien, lu depuis la cible"
+          },
+          "typeEntiteSourceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "typeEntiteCibleId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "multiple": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "code",
+          "libelle",
+          "libelleInverse",
+          "typeEntiteSourceId",
+          "typeEntiteCibleId"
+        ]
+      },
+      "ModificationTypeLienDto": {
+        "type": "object",
+        "properties": {
+          "libelle": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "libelleInverse": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "multiple": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CreationOngletDto": {
+        "type": "object",
+        "properties": {
+          "typeEntiteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "libelle": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "example": "Membres"
+          }
+        },
+        "required": [
+          "typeEntiteId",
+          "libelle"
+        ]
+      },
+      "ModificationOngletDto": {
+        "type": "object",
+        "properties": {
+          "libelle": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          }
+        }
+      },
+      "LienDOngletDto": {
+        "type": "object",
+        "properties": {
+          "typeLienId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sens": {
+            "enum": [
+              "direct",
+              "inverse"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "typeLienId",
+          "sens"
+        ]
+      },
+      "CompositionOngletDto": {
+        "type": "object",
+        "properties": {
+          "typesLiens": {
+            "description": "Jeu complet, dans l'ordre voulu. Il remplace le précédent.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LienDOngletDto"
+            }
+          }
+        },
+        "required": [
+          "typesLiens"
+        ]
       },
       "SanteReponseDto": {
         "type": "object",

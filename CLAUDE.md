@@ -44,6 +44,28 @@ Elle départage tous les arbitrages d'implémentation.
 
 ---
 
+## Référentiel
+
+Le catalogue — types d'entités, champs, types de liens, onglets — se lit en une
+requête, `GET /referentiel`, **ouverte à tout agent connecté** : le front en
+dérive chacun de ses formulaires et chacune de ses fiches, et le catalogue
+décrit la forme du modèle, jamais son contenu.
+
+Trois règles y sont tenues côté API :
+
+- **Le sens d'un lien dans un onglet doit être cohérent avec son domaine.** Un
+  onglet appartient à un type d'entité et n'affiche un type de lien que du côté
+  où ce type se trouve. L'onglet Membres du groupe montre le côté *inverse* de
+  « membre de », qui va de la personne vers le groupe.
+- **Le gabarit de libellé ne cite que des champs existants** — sauf à la
+  création du type, où il n'en a encore aucun : seule sa forme est alors
+  vérifiable. Supprimer un champ qu'un gabarit cite est refusé.
+- **Les contraintes de domaine d'un type de lien sont définitives.** Des liens
+  déjà posés les respectent ; les changer les invaliderait rétroactivement.
+
+Les suppressions de référentiel sont refusées dès qu'une donnée en dépend : les
+clés étrangères sont en `RESTRICT`, et la violation est traduite en 409.
+
 ## Modèle, en trois phrases
 
 - Le **fait** est l'unité élémentaire : un champ ou un lien, toujours porteur
@@ -142,9 +164,14 @@ Quatre décorateurs, et un seul défaut :
 | --- | --- |
 | `@Publique()` | Sans jeton. Réservé à `/sante` et `/auth/login` |
 | `@Permissions(...)` | Toutes les permissions listées sont exigées |
+| `@SuperAdminSeul()` | Câblé en dur. Aucune permission ne l'ouvre |
 | `@SansPermission()` | Authentifié, sans permission particulière — déclaration explicite |
 | `@AutoriseeEnChangementImpose()` | Joignable par un compte en changement de mot de passe imposé |
 | *rien* | **Refusé** |
+
+`@SuperAdminSeul()` couvre la configuration du modèle métier. Elle ne se délègue
+pas par un jeu de permissions reconfigurable, sous peine qu'un grade puisse
+s'accorder le droit de la modifier.
 
 Le catalogue vit dans `src/agents/permissions.ts`. Il reprend la conception
 §6.7, plus `agent.gerer` et `role.gerer` : le catalogue accordait
@@ -174,7 +201,7 @@ applique les migrations avant de lancer jest.
 | --- | --- |
 | 0 — Socle technique | fait |
 | 1 — Authentification et agents | fait |
-| 3 — Référentiel | à faire |
+| 3 — Référentiel | fait |
 | 4 — Entités et faits | à faire |
 | 5 — Visibilité et permissions | à faire |
 | 7 — Fiche entité (back) | à faire |
