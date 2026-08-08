@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 
+import type { Permission } from '../agents/permissions';
+import type { AgentCourant } from '../auth/agent-courant';
 import { EntitesService } from '../entites/entites.service';
 import { FaitsService } from '../faits/faits.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -145,13 +147,18 @@ export class MadrinaService {
     const { types, champs, liens } = await this.relever();
     const entites: Record<string, string> = {};
 
+    // Les services d'écriture prennent l'agent courant, pas son identifiant :
+    // ils contrôlent la visibilité de ce qu'ils touchent. On le reconstitue
+    // depuis le compte, comme le ferait le garde d'authentification.
+    const auteur = await this.resoudreAuteur(auteurId);
+
     const champ = (cle: string, valeur: unknown) => ({
       definitionChampId: champs[cle],
       valeur,
     });
 
     // 1 — le groupe, point de départ de l'enquête
-    const madrina = await this.entites.creer(auteurId, {
+    const madrina = await this.entites.creer(auteur, {
       typeEntiteId: types.groupe,
       ...SOURCES.informateur,
       note: 'Nouveau groupe, très discret, cherche des informations sur la SAPD. À surveiller.',
@@ -163,7 +170,7 @@ export class MadrinaService {
     entites.madrina = madrina.id;
 
     // 2 — le QG relevé lors de la planque
-    const villa = await this.entites.creer(auteurId, {
+    const villa = await this.entites.creer(auteur, {
       typeEntiteId: types.lieu,
       ...SOURCES.planque,
       champs: [
@@ -175,7 +182,7 @@ export class MadrinaService {
     entites.villa = villa.id;
 
     // 3 — une plaque relevée devant la villa
-    const komoda = await this.entites.creer(auteurId, {
+    const komoda = await this.entites.creer(auteur, {
       typeEntiteId: types.vehicule,
       ...SOURCES.planque,
       champs: [
@@ -188,7 +195,7 @@ export class MadrinaService {
     entites.komoda = komoda.id;
 
     // 4 — son propriétaire, trouvé à la centrale SAPD
-    const tyron = await this.entites.creer(auteurId, {
+    const tyron = await this.entites.creer(auteur, {
       typeEntiteId: types.personne,
       ...SOURCES.centrale,
       champs: [
@@ -208,7 +215,7 @@ export class MadrinaService {
     entites.tyron = tyron.id;
 
     // 5 — premier braquage
-    const bijouterie = await this.entites.creer(auteurId, {
+    const bijouterie = await this.entites.creer(auteur, {
       typeEntiteId: types.lieu,
       ...SOURCES.bijouterie,
       champs: [
@@ -218,7 +225,7 @@ export class MadrinaService {
     });
     entites.bijouterie = bijouterie.id;
 
-    const braquageBijouterie = await this.entites.creer(auteurId, {
+    const braquageBijouterie = await this.entites.creer(auteur, {
       typeEntiteId: types.evenement,
       ...SOURCES.bijouterie,
       champs: [
@@ -240,7 +247,7 @@ export class MadrinaService {
     entites.braquageBijouterie = braquageBijouterie.id;
 
     // 6 — un véhicule présent au braquage, et sa propriétaire
-    const sultan = await this.entites.creer(auteurId, {
+    const sultan = await this.entites.creer(auteur, {
       typeEntiteId: types.vehicule,
       ...SOURCES.bijouterie,
       champs: [
@@ -254,7 +261,7 @@ export class MadrinaService {
     });
     entites.sultan = sultan.id;
 
-    const isadora = await this.entites.creer(auteurId, {
+    const isadora = await this.entites.creer(auteur, {
       typeEntiteId: types.personne,
       ...SOURCES.centrale,
       champs: [
@@ -267,14 +274,14 @@ export class MadrinaService {
     entites.isadora = isadora.id;
 
     // 7 — second braquage, un mois plus tard
-    const autoroute = await this.entites.creer(auteurId, {
+    const autoroute = await this.entites.creer(auteur, {
       typeEntiteId: types.lieu,
       ...SOURCES.fourgon,
       champs: [champ('lieu.nom', 'Autoroute Senora')],
     });
     entites.autoroute = autoroute.id;
 
-    const braquageFourgon = await this.entites.creer(auteurId, {
+    const braquageFourgon = await this.entites.creer(auteur, {
       typeEntiteId: types.evenement,
       ...SOURCES.fourgon,
       champs: [
@@ -285,7 +292,7 @@ export class MadrinaService {
     });
     entites.braquageFourgon = braquageFourgon.id;
 
-    const buffalo = await this.entites.creer(auteurId, {
+    const buffalo = await this.entites.creer(auteur, {
       typeEntiteId: types.vehicule,
       ...SOURCES.fourgon,
       champs: [
@@ -304,7 +311,7 @@ export class MadrinaService {
     // Aucun ne relie Isadora à Tyron. Le rapprochement tombera seul, par le
     // graphe : les véhicules d'Isadora sont présents aux deux événements où
     // Tyron apparaît.
-    await this.faits.creer(auteurId, {
+    await this.faits.creer(auteur, {
       sujetId: tyron.id,
       nature: 'lien',
       typeLienId: liens.interpelle_lors_de,
@@ -312,7 +319,7 @@ export class MadrinaService {
       ...SOURCES.bijouterie,
     });
 
-    await this.faits.creer(auteurId, {
+    await this.faits.creer(auteur, {
       sujetId: tyron.id,
       nature: 'lien',
       typeLienId: liens.present_lors_de,
@@ -320,7 +327,7 @@ export class MadrinaService {
       ...SOURCES.fourgon,
     });
 
-    await this.faits.creer(auteurId, {
+    await this.faits.creer(auteur, {
       sujetId: isadora.id,
       nature: 'lien',
       typeLienId: liens.proprietaire_de,
@@ -331,7 +338,7 @@ export class MadrinaService {
     // Une seconde source confirme la couleur du Komoda : deux faits portent la
     // même affirmation, ce qui doit produire le signal de multi-sources sans
     // rien revaloriser automatiquement.
-    await this.faits.creer(auteurId, {
+    await this.faits.creer(auteur, {
       sujetId: komoda.id,
       nature: 'champ',
       definitionChampId: champs['vehicule.couleur'],
@@ -344,6 +351,36 @@ export class MadrinaService {
     );
 
     return entites;
+  }
+
+  /** Reconstitue l'agent courant depuis son compte, comme le fait le garde. */
+  private async resoudreAuteur(id: string): Promise<AgentCourant> {
+    const agent = await this.prisma.sansFiltre.agent.findUniqueOrThrow({
+      where: { id },
+      include: {
+        role: true,
+        habilitationsDossier: { select: { dossierId: true } },
+        habilitationsEntite: { select: { entiteId: true } },
+      },
+    });
+
+    return {
+      id: agent.id,
+      matricule: agent.matricule,
+      prenom: agent.prenom,
+      nom: agent.nom,
+      roleId: agent.roleId,
+      roleCode: agent.role.code,
+      superAdmin: agent.superAdmin,
+      doitChangerMdp: agent.doitChangerMdp,
+      permissions: agent.role.permissions as Permission[],
+      dossiersHabilites: agent.habilitationsDossier.map(
+        (habilitation) => habilitation.dossierId,
+      ),
+      entitesHabilitees: agent.habilitationsEntite.map(
+        (habilitation) => habilitation.entiteId,
+      ),
+    };
   }
 
   private async releverTypes(): Promise<Record<string, string>> {

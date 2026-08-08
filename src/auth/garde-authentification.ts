@@ -100,7 +100,11 @@ export class GardeAuthentification implements CanActivate {
   private async resoudreAgent(contenu: ContenuJeton): Promise<AgentCourant> {
     const agent = await this.prisma.agent.findUnique({
       where: { id: contenu.sub },
-      include: { role: true },
+      include: {
+        role: true,
+        habilitationsDossier: { select: { dossierId: true } },
+        habilitationsEntite: { select: { entiteId: true } },
+      },
     });
 
     if (
@@ -113,6 +117,12 @@ export class GardeAuthentification implements CanActivate {
     }
 
     return {
+      dossiersHabilites: agent.habilitationsDossier.map(
+        (habilitation) => habilitation.dossierId,
+      ),
+      entitesHabilitees: agent.habilitationsEntite.map(
+        (habilitation) => habilitation.entiteId,
+      ),
       id: agent.id,
       matricule: agent.matricule,
       prenom: agent.prenom,

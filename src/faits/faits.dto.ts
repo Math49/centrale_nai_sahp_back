@@ -66,6 +66,14 @@ export class CreationFaitDto {
   @IsOptional()
   @IsEnum(Visibilite)
   visibilite?: Visibilite;
+
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description: 'Dossier de saisie — le fait en hérite la visibilité',
+  })
+  @IsOptional()
+  @IsUUID()
+  dossierId?: string;
 }
 
 export class ModificationFaitDto {
@@ -121,6 +129,16 @@ export class FaitDto {
   @ApiProperty({ format: 'date' }) dateConstatation!: string;
   @ApiProperty({ enum: EtatFait }) etat!: EtatFait;
   @ApiProperty({ enum: Visibilite }) visibilite!: Visibilite;
+
+  @ApiProperty({
+    enum: Visibilite,
+    description: 'Calculée en base : la plus restrictive des quatre gardiens',
+  })
+  visibiliteEffective!: Visibilite;
+
+  @ApiProperty({ nullable: true, format: 'uuid' })
+  dossierId!: string | null;
+
   @ApiProperty({ format: 'date-time' }) creeLe!: string;
   @ApiProperty({ format: 'date-time' }) modifieLe!: string;
 }

@@ -86,6 +86,15 @@ export class CreationEntiteDto extends ProvenanceDto {
   typeEntiteId!: string;
 
   @ApiPropertyOptional({
+    format: 'uuid',
+    description:
+      'Dossier depuis lequel la saisie a lieu. Ses faits en héritent la visibilité ; l’entité, elle, ne porte que la sienne.',
+  })
+  @IsOptional()
+  @IsUUID()
+  dossierId?: string;
+
+  @ApiPropertyOptional({
     description: 'Champ libre, sans source ni fiabilité — ce n’est pas un fait',
   })
   @IsOptional()
@@ -134,6 +143,13 @@ export class FaitDeChampDto {
   fiabilite!: number;
   @ApiProperty({ format: 'date' }) dateConstatation!: string;
   @ApiProperty({ enum: Visibilite }) visibilite!: Visibilite;
+
+  @ApiProperty({
+    enum: Visibilite,
+    description:
+      'La plus restrictive parmi le fait, son dossier de saisie, son sujet et sa cible',
+  })
+  visibiliteEffective!: Visibilite;
 }
 
 export class ChampDeFicheDto {
@@ -188,6 +204,7 @@ export class LienDeFicheDto {
   @ApiProperty() fiabilite!: number;
   @ApiProperty({ format: 'date' }) dateConstatation!: string;
   @ApiProperty({ enum: Visibilite }) visibilite!: Visibilite;
+  @ApiProperty({ enum: Visibilite }) visibiliteEffective!: Visibilite;
 }
 
 export class EntiteResumeeDto {
@@ -203,8 +220,17 @@ export class EntiteResumeeDto {
 export class FicheEntiteDto extends EntiteResumeeDto {
   @ApiProperty() typeLibelle!: string;
 
-  @ApiProperty({ description: 'Projection des faits, maintenue par trigger' })
+  @ApiProperty({
+    description:
+      'Projection des faits **visibles par cet agent** — recomposée à la lecture, et non recopiée depuis la colonne, qui ignore la visibilité',
+  })
   valeurs!: Record<string, unknown>;
+
+  @ApiProperty({
+    description:
+      'Faux sur une entité restreinte non habilitée : l’objet est visible, son contenu non',
+  })
+  contenuLisible!: boolean;
 
   @ApiProperty({ nullable: true }) note!: string | null;
   @ApiProperty({ type: [ChampDeFicheDto] }) champs!: ChampDeFicheDto[];

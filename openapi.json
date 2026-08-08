@@ -1103,6 +1103,7 @@
     },
     "/entites": {
       "get": {
+        "description": "Les entités privées en sont absentes, sans mention — un décompte manquant révélerait leur existence.",
         "operationId": "EntitesController_lister",
         "parameters": [
           {
@@ -1214,7 +1215,7 @@
     },
     "/entites/similaires": {
       "get": {
-        "description": "Similarité trigramme du libellé, et identité exacte d’une valeur unique du type — ce second signal ne laisse aucun doute.",
+        "description": "Similarité trigramme du libellé, et identité exacte d’une valeur unique du type. Ne propose jamais une entité privée.",
         "operationId": "EntitesController_similaires",
         "parameters": [
           {
@@ -1263,7 +1264,7 @@
     },
     "/entites/{id}": {
       "get": {
-        "description": "Champs projetés avec les faits qui les soutiennent, et liens lus depuis cette fiche — un lien est une arête unique, vue des deux côtés.",
+        "description": "Champs projetés depuis les seuls faits visibles par l’agent, et liens lus depuis cette fiche — un lien est une arête unique, vue des deux côtés.",
         "operationId": "EntitesController_lire",
         "parameters": [
           {
@@ -1285,6 +1286,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Inconnue, ou privée sans habilitation — jamais 403, qui confirmerait son existence"
           }
         },
         "security": [
@@ -2553,6 +2557,15 @@
               "prive"
             ],
             "type": "string"
+          },
+          "visibiliteEffective": {
+            "enum": [
+              "public",
+              "restreint",
+              "prive"
+            ],
+            "type": "string",
+            "description": "La plus restrictive parmi le fait, son dossier de saisie, son sujet et sa cible"
           }
         },
         "required": [
@@ -2561,7 +2574,8 @@
           "source",
           "fiabilite",
           "dateConstatation",
-          "visibilite"
+          "visibilite",
+          "visibiliteEffective"
         ]
       },
       "ChampDeFicheDto": {
@@ -2683,6 +2697,14 @@
               "prive"
             ],
             "type": "string"
+          },
+          "visibiliteEffective": {
+            "enum": [
+              "public",
+              "restreint",
+              "prive"
+            ],
+            "type": "string"
           }
         },
         "required": [
@@ -2694,7 +2716,8 @@
           "source",
           "fiabilite",
           "dateConstatation",
-          "visibilite"
+          "visibilite",
+          "visibiliteEffective"
         ]
       },
       "FicheEntiteDto": {
@@ -2739,7 +2762,11 @@
           "valeurs": {
             "type": "object",
             "additionalProperties": true,
-            "description": "Projection des faits, maintenue par trigger"
+            "description": "Projection des faits **visibles par cet agent** — recomposée à la lecture, et non recopiée depuis la colonne, qui ignore la visibilité"
+          },
+          "contenuLisible": {
+            "type": "boolean",
+            "description": "Faux sur une entité restreinte non habilitée : l’objet est visible, son contenu non"
           },
           "note": {
             "type": "string",
@@ -2777,6 +2804,7 @@
           "modifieLe",
           "typeLibelle",
           "valeurs",
+          "contenuLisible",
           "note",
           "champs",
           "liens",
@@ -2897,6 +2925,11 @@
             "type": "string",
             "format": "uuid"
           },
+          "dossierId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Dossier depuis lequel la saisie a lieu. Ses faits en héritent la visibilité ; l’entité, elle, ne porte que la sienne."
+          },
           "note": {
             "type": "string",
             "maxLength": 10000,
@@ -2993,6 +3026,11 @@
               "prive"
             ],
             "type": "string"
+          },
+          "dossierId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Dossier de saisie — le fait en hérite la visibilité"
           }
         },
         "required": [
@@ -3066,6 +3104,20 @@
             ],
             "type": "string"
           },
+          "visibiliteEffective": {
+            "enum": [
+              "public",
+              "restreint",
+              "prive"
+            ],
+            "type": "string",
+            "description": "Calculée en base : la plus restrictive des quatre gardiens"
+          },
+          "dossierId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
           "creeLe": {
             "type": "string",
             "format": "date-time"
@@ -3088,6 +3140,8 @@
           "dateConstatation",
           "etat",
           "visibilite",
+          "visibiliteEffective",
+          "dossierId",
           "creeLe",
           "modifieLe"
         ]

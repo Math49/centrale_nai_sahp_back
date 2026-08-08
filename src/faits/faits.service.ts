@@ -6,10 +6,12 @@ import {
 } from '@nestjs/common';
 import { NatureFait, Prisma, Visibilite, type Fait } from '@prisma/client';
 
+import type { AgentCourant } from '../auth/agent-courant';
 import { UniciteService } from '../entites/unicite.service';
 import { ValidationDynamiqueService } from '../entites/validation-dynamique.service';
 import { JournalAuditService } from '../journal/journal-audit.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { VisibiliteService } from '../visibilite/visibilite.service';
 import type {
   CreationFaitDto,
   FaitDto,
@@ -22,27 +24,40 @@ export class FaitsService {
     private readonly prisma: PrismaService,
     private readonly validation: ValidationDynamiqueService,
     private readonly unicite: UniciteService,
+    private readonly visibilite: VisibiliteService,
     private readonly audit: JournalAuditService,
   ) {}
 
-  async creer(agentId: string, donnees: CreationFaitDto): Promise<FaitDto> {
-    const sujet = await this.prisma.entite.findUnique({
+  async creer(agent: AgentCourant, donnees: CreationFaitDto): Promise<FaitDto> {
+    // Écrire sur une entité qu'on ne voit pas est impossible : 404, comme en
+    // lecture, pour ne pas confirmer son existence.
+    await this.visibilite.entiteVisibleOuIntrouvable(agent, donnees.sujetId);
+
+    const sujet = await this.prisma.sansFiltre.entite.findUniqueOrThrow({
       where: { id: donnees.sujetId },
       include: { typeEntite: true },
     });
 
-    if (!sujet) {
-      throw new NotFoundException('entité sujet inconnue');
+    if (donnees.dossierId) {
+      const dossier = await this.prisma.sansFiltre.dossier.findUnique({
+        where: { id: donnees.dossierId },
+        select: { id: true },
+      });
+
+      if (!dossier) {
+        throw new BadRequestException('dossier de saisie inconnu');
+      }
     }
 
     const data: Prisma.FaitUncheckedCreateInput = {
       sujetId: sujet.id,
       nature: donnees.nature,
+      dossierId: donnees.dossierId,
       source: donnees.source.trim(),
       fiabilite: donnees.fiabilite,
       dateConstatation: new Date(donnees.dateConstatation),
       visibilite: donnees.visibilite ?? Visibilite.public,
-      creePar: agentId,
+      creePar: agent.id,
     };
 
     if (donnees.nature === NatureFait.champ) {
@@ -50,9 +65,10 @@ export class FaitsService {
         throw new BadRequestException('champ non désigné');
       }
 
-      const definition = await this.prisma.definitionChamp.findUnique({
-        where: { id: donnees.definitionChampId },
-      });
+      const definition =
+        await this.prisma.sansFiltre.definitionChamp.findUnique({
+          where: { id: donnees.definitionChampId },
+        });
 
       if (!definition || definition.typeEntiteId !== sujet.typeEntiteId) {
         throw new BadRequestException(
@@ -68,8 +84,12 @@ export class FaitsService {
       }
 
       const [typeLien, cible] = await Promise.all([
-        this.prisma.typeLien.findUnique({ where: { id: donnees.typeLienId } }),
-        this.prisma.entite.findUnique({ where: { id: donnees.cibleId } }),
+        this.prisma.sansFiltre.typeLien.findUnique({
+          where: { id: donnees.typeLienId },
+        }),
+        this.prisma.sansFiltre.entite.findUnique({
+          where: { id: donnees.cibleId },
+        }),
       ]);
 
       if (!typeLien) {
@@ -115,7 +135,7 @@ export class FaitsService {
 
           await this.audit.tracer(
             {
-              agentId,
+              agentId: agent.id,
               action: 'fait.creer',
               cibleTable: 'fait',
               cibleId: cree.id,
@@ -139,11 +159,12 @@ export class FaitsService {
    * sans laisser de trace de ce qui avait été affirmé.
    */
   async modifier(
-    agentId: string,
+    agent: AgentCourant,
     id: string,
     donnees: ModificationFaitDto,
   ): Promise<FaitDto> {
-    const avant = await this.prisma.fait.findUnique({
+    // Lecture filtrée : un fait masqué est introuvable, pas refusé.
+    const avant = await this.visibilite.clientPour(agent).fait.findFirst({
       where: { id },
       include: { definitionChamp: true },
     });
@@ -159,7 +180,7 @@ export class FaitsService {
     }
 
     const data: Prisma.FaitUncheckedUpdateInput = {
-      modifiePar: agentId,
+      modifiePar: agent.id,
     };
 
     if (donnees.valeur !== undefined) {
@@ -203,7 +224,7 @@ export class FaitsService {
 
           await this.audit.tracer(
             {
-              agentId,
+              agentId: agent.id,
               action: 'fait.modifier',
               cibleTable: 'fait',
               cibleId: id,
@@ -242,6 +263,8 @@ export class FaitsService {
       dateConstatation: fait.dateConstatation.toISOString().slice(0, 10),
       etat: fait.etat,
       visibilite: fait.visibilite,
+      visibiliteEffective: fait.visibiliteEffective,
+      dossierId: fait.dossierId,
       creeLe: fait.creeLe.toISOString(),
       modifieLe: fait.modifieLe.toISOString(),
     };

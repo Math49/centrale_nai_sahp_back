@@ -20,6 +20,16 @@ export interface AgentCourant {
   superAdmin: boolean;
   doitChangerMdp: boolean;
   permissions: Permission[];
+
+  /**
+   * Whitelists nominatives, résolues avec l'agent.
+   *
+   * Chargées à chaque requête, en même temps que le compte : le moteur de
+   * visibilité devient alors purement synchrone, ce qui le rend testable sans
+   * base et évite d'oublier de les charger sur un chemin de lecture.
+   */
+  dossiersHabilites: string[];
+  entitesHabilitees: string[];
 }
 
 export interface RequeteAuthentifiee extends Request {

@@ -82,10 +82,13 @@ model Entite {
   creeLe    DateTime @default(now()) @map("cree_le") @db.Timestamptz(6)
   modifieLe DateTime @default(now()) @map("modifie_le") @db.Timestamptz(6)
 
-  faitsOuElleEstSujet Fait[]         @relation("fait_sujet")
-  faitsOuElleEstCible Fait[]         @relation("fait_cible")
+  faitsOuElleEstSujet Fait[]               @relation("fait_sujet")
+  faitsOuElleEstCible Fait[]               @relation("fait_cible")
   fichiers            Fichier[]
   valeursUniques      ValeurUnique[]
+  dossiersPivot       Dossier[]            @relation("dossier_pivot")
+  suivis              Suivi[]
+  habilitations       HabilitationEntite[]
 
   @@map("entite")
 }
@@ -127,9 +130,15 @@ model Fait {
 
   visibilite Visibilite @default(public)
 
-  /// Minimum entre la visibilité propre, celle du dossier de saisie, du sujet
-  /// et de la cible. Calculée par un trigger BEFORE au lot 5.
+  /// La plus restrictive parmi la visibilité propre, celle du dossier de
+  /// saisie, du sujet et de la cible. Calculée par un trigger **BEFORE** :
+  /// en AFTER, la ligne renvoyée par le RETURNING d'un create serait périmée.
   visibiliteEffective Visibilite @default(public) @map("visibilite_effective")
+
+  /// Dossier depuis lequel le fait a été saisi. Sert à en hériter la
+  /// visibilité et à tracer l'origine — le fait n'appartient pas au dossier.
+  dossierId String?  @map("dossier_id") @db.Uuid
+  dossier   Dossier? @relation(fields: [dossierId], references: [id], onDelete: Restrict)
 
   creePar    String   @map("cree_par") @db.Uuid
   auteur     Agent    @relation("fait_auteur", fields: [creePar], references: [id], onDelete: Restrict)
@@ -162,6 +171,92 @@ model Fichier {
   faits Fait[]
 
   @@map("fichier")
+}
+
+/// Périmètre d'enquête, ancré sur une entité pivot.
+///
+/// Le dossier ne contient rien : il contextualise. `suivi` relie un dossier aux
+/// entités surveillées, et chaque fait retient son dossier de saisie uniquement
+/// pour en hériter la visibilité et tracer son origine.
+///
+/// Les routes, le panneau de dossier et la gestion du suivi arrivent au lot 8 ;
+/// la table est créée ici parce que le moteur de visibilité en dépend — un fait
+/// hérite de la visibilité de son dossier de saisie.
+model Dossier {
+  id  String @id @default(uuid()) @db.Uuid
+  nom String @unique
+
+  /// Obligatoire : un dossier sans entité pivot n'existe pas.
+  entitePivotId String @map("entite_pivot_id") @db.Uuid
+  entitePivot   Entite @relation("dossier_pivot", fields: [entitePivotId], references: [id], onDelete: Restrict)
+
+  visibilite Visibilite @default(public)
+  note       String?
+  etat       EtatEntite @default(actif)
+
+  creePar String   @map("cree_par") @db.Uuid
+  auteur  Agent    @relation("dossier_auteur", fields: [creePar], references: [id], onDelete: Restrict)
+  creeLe  DateTime @default(now()) @map("cree_le") @db.Timestamptz(6)
+
+  suivis         Suivi[]
+  habilitations  HabilitationDossier[]
+  faitsSaisisIci Fait[]
+
+  @@map("dossier")
+}
+
+/// Association dossier ↔ entité. Aucune donnée n'appartient à un dossier.
+model Suivi {
+  dossierId String  @map("dossier_id") @db.Uuid
+  dossier   Dossier @relation(fields: [dossierId], references: [id], onDelete: Cascade)
+
+  entiteId String @map("entite_id") @db.Uuid
+  entite   Entite @relation(fields: [entiteId], references: [id], onDelete: Cascade)
+
+  ajoutePar String   @map("ajoute_par") @db.Uuid
+  auteur    Agent    @relation("suivi_auteur", fields: [ajoutePar], references: [id], onDelete: Restrict)
+  ajouteLe  DateTime @default(now()) @map("ajoute_le") @db.Timestamptz(6)
+
+  @@id([dossierId, entiteId])
+  @@index([entiteId])
+  @@map("suivi")
+}
+
+/// Whitelist d'agents sur un dossier.
+///
+/// Deux tables d'habilitation distinctes plutôt qu'une table polymorphe : les
+/// clés étrangères restent réelles.
+model HabilitationDossier {
+  dossierId String  @map("dossier_id") @db.Uuid
+  dossier   Dossier @relation(fields: [dossierId], references: [id], onDelete: Cascade)
+
+  agentId String @map("agent_id") @db.Uuid
+  agent   Agent  @relation("habilitation_dossier_agent", fields: [agentId], references: [id], onDelete: Restrict)
+
+  accordePar String   @map("accorde_par") @db.Uuid
+  auteur     Agent    @relation("habilitation_dossier_auteur", fields: [accordePar], references: [id], onDelete: Restrict)
+  accordeLe  DateTime @default(now()) @map("accorde_le") @db.Timestamptz(6)
+
+  @@id([dossierId, agentId])
+  @@index([agentId])
+  @@map("habilitation_dossier")
+}
+
+/// Whitelist d'agents sur une entité.
+model HabilitationEntite {
+  entiteId String @map("entite_id") @db.Uuid
+  entite   Entite @relation(fields: [entiteId], references: [id], onDelete: Cascade)
+
+  agentId String @map("agent_id") @db.Uuid
+  agent   Agent  @relation("habilitation_entite_agent", fields: [agentId], references: [id], onDelete: Restrict)
+
+  accordePar String   @map("accorde_par") @db.Uuid
+  auteur     Agent    @relation("habilitation_entite_auteur", fields: [accordePar], references: [id], onDelete: Restrict)
+  accordeLe  DateTime @default(now()) @map("accorde_le") @db.Timestamptz(6)
+
+  @@id([entiteId, agentId])
+  @@index([agentId])
+  @@map("habilitation_entite")
 }
 
 /// Index d'unicité des champs marqués uniques, sur valeur normalisée.
@@ -358,6 +453,13 @@ model Agent {
   entitesCreees       Entite[]       @relation("entite_auteur")
   faitsCrees          Fait[]         @relation("fait_auteur")
   fichiersDeposes     Fichier[]      @relation("fichier_deposeur")
+
+  dossiersCrees            Dossier[]             @relation("dossier_auteur")
+  suivisAjoutes            Suivi[]               @relation("suivi_auteur")
+  habilitationsDossier     HabilitationDossier[] @relation("habilitation_dossier_agent")
+  habilitationsDossierDues HabilitationDossier[] @relation("habilitation_dossier_auteur")
+  habilitationsEntite      HabilitationEntite[]  @relation("habilitation_entite_agent")
+  habilitationsEntiteDues  HabilitationEntite[]  @relation("habilitation_entite_auteur")
 
   @@map("agent")
 }

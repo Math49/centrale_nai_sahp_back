@@ -2,7 +2,6 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
-  NotFoundException,
 } from '@nestjs/common';
 import {
   EtatEntite,
@@ -17,20 +16,20 @@ import {
   type TypeLien,
 } from '@prisma/client';
 
+import type { AgentCourant } from '../auth/agent-courant';
 import { JournalAuditService } from '../journal/journal-audit.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { VisibiliteService } from '../visibilite/visibilite.service';
 import type {
+  ChampDeFicheDto,
   ChampSaisiDto,
   CreationEntiteDto,
+  EntiteResumeeDto,
   FicheEntiteDto,
+  LienDeFicheDto,
   LienSaisiDto,
   ModificationEntiteDto,
   SuggestionDoublonDto,
-} from './entites.dto';
-import type {
-  ChampDeFicheDto,
-  EntiteResumeeDto,
-  LienDeFicheDto,
 } from './entites.dto';
 import { UniciteService } from './unicite.service';
 import { ValidationDynamiqueService } from './validation-dynamique.service';
@@ -53,19 +52,27 @@ interface FiltresAnnuaire {
 
 type TypeAvecChamps = TypeEntite & { champs: DefinitionChamp[] };
 
+/** Ordre de préséance des faits d'un même champ dans la projection. */
+const PRESEANCE: Prisma.FaitOrderByWithRelationInput[] = [
+  { fiabilite: 'desc' },
+  { dateConstatation: 'desc' },
+  { creeLe: 'desc' },
+];
+
 @Injectable()
 export class EntitesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly validation: ValidationDynamiqueService,
     private readonly unicite: UniciteService,
+    private readonly visibilite: VisibiliteService,
     private readonly audit: JournalAuditService,
   ) {}
 
   // ─────────────────────────── Création ───────────────────────────
 
   async creer(
-    agentId: string,
+    agent: AgentCourant,
     donnees: CreationEntiteDto,
   ): Promise<FicheEntiteDto> {
     const type = await this.chargerType(donnees.typeEntiteId);
@@ -77,6 +84,10 @@ export class EntitesService {
       type.champs,
       champsSaisis.map((champ) => champ.definitionChampId),
     );
+
+    if (donnees.dossierId) {
+      await this.verifierDossier(donnees.dossierId);
+    }
 
     const champsPrepares = champsSaisis.map((saisi) =>
       this.preparerChamp(type, saisi, donnees),
@@ -96,7 +107,7 @@ export class EntitesService {
               libelle: '',
               note: donnees.note,
               visibilite: donnees.visibilite ?? Visibilite.public,
-              creePar: agentId,
+              creePar: agent.id,
             },
           });
 
@@ -107,11 +118,12 @@ export class EntitesService {
                 nature: NatureFait.champ,
                 definitionChampId: champ.definitionChampId,
                 valeur: champ.valeur,
+                dossierId: donnees.dossierId,
                 source: champ.provenance.source,
                 fiabilite: champ.provenance.fiabilite,
                 dateConstatation: champ.provenance.dateConstatation,
                 visibilite: champ.provenance.visibilite,
-                creePar: agentId,
+                creePar: agent.id,
               },
             });
           }
@@ -123,11 +135,12 @@ export class EntitesService {
                 nature: NatureFait.lien,
                 typeLienId: lien.typeLienId,
                 cibleId: lien.cibleId,
+                dossierId: donnees.dossierId,
                 source: lien.provenance.source,
                 fiabilite: lien.provenance.fiabilite,
                 dateConstatation: lien.provenance.dateConstatation,
                 visibilite: lien.provenance.visibilite,
-                creePar: agentId,
+                creePar: agent.id,
               },
             });
           }
@@ -137,7 +150,7 @@ export class EntitesService {
 
           await this.audit.tracer(
             {
-              agentId,
+              agentId: agent.id,
               action: 'entite.creer',
               cibleTable: 'entite',
               cibleId: entite.id,
@@ -145,6 +158,7 @@ export class EntitesService {
                 typeCode: type.code,
                 champs: champsPrepares.length,
                 liens: liensPrepares.length,
+                dossierId: donnees.dossierId ?? null,
               },
             },
             transaction,
@@ -154,64 +168,57 @@ export class EntitesService {
         }),
     );
 
-    return this.lire(id);
+    return this.lire(agent, id);
   }
 
   // ─────────────────────────── Lecture ───────────────────────────
 
-  async lire(id: string): Promise<FicheEntiteDto> {
-    const entite = await this.prisma.entite.findUnique({
-      where: { id },
+  /**
+   * Fiche assemblée pour un agent donné.
+   *
+   * Deux choses s'y jouent :
+   *
+   * · L'entité doit exister **pour cet agent** — sinon 404, jamais 403.
+   *
+   * · La projection est **recomposée depuis les faits visibles**, et non
+   *   recopiée depuis `entite.valeurs`, qui agrège tous les faits sans égard
+   *   pour la visibilité. C'est exactement le cas de référence : l'entité reste
+   *   consultable, mais tout ce qui a été écrit sur elle depuis un dossier privé
+   *   doit disparaître de sa fiche.
+   */
+  async lire(agent: AgentCourant, id: string): Promise<FicheEntiteDto> {
+    const controle = await this.visibilite.entiteVisibleOuIntrouvable(
+      agent,
+      id,
+    );
+
+    const entite = await this.prisma.sansFiltre.entite.findUniqueOrThrow({
+      where: { id: controle.id },
       include: {
         typeEntite: { include: { champs: { orderBy: { ordre: 'asc' } } } },
       },
     });
 
-    if (!entite) {
-      throw new NotFoundException('entité inconnue');
-    }
+    const client = this.visibilite.clientPour(agent);
 
+    // Les `include` de sujet et de cible ne sont pas filtrés — ils n'ont pas à
+    // l'être : un fait dont la cible est privée est lui-même au moins privé par
+    // héritage, donc déjà écarté. C'est la règle des gardiens qui rend ces
+    // jointures sûres.
     const [faitsSujet, faitsCible] = await Promise.all([
-      this.prisma.fait.findMany({
+      client.fait.findMany({
         where: { sujetId: id, etat: EtatFait.actif },
         include: { cible: { include: { typeEntite: true } }, typeLien: true },
-        orderBy: [{ fiabilite: 'desc' }, { dateConstatation: 'desc' }],
+        orderBy: PRESEANCE,
       }),
-      this.prisma.fait.findMany({
+      client.fait.findMany({
         where: { cibleId: id, etat: EtatFait.actif },
         include: { sujet: { include: { typeEntite: true } }, typeLien: true },
-        orderBy: [{ fiabilite: 'desc' }, { dateConstatation: 'desc' }],
+        orderBy: PRESEANCE,
       }),
     ]);
 
-    const valeurs = (entite.valeurs ?? {}) as Record<string, unknown>;
-
-    // Un champ non renseigné reste affiché : l'absence d'information est une
-    // information. La liste vient donc du référentiel, pas des faits.
-    const champs: ChampDeFicheDto[] = entite.typeEntite.champs.map(
-      (definition) => {
-        const faits = faitsSujet.filter(
-          (fait) =>
-            fait.nature === NatureFait.champ &&
-            fait.definitionChampId === definition.id,
-        );
-
-        const sources = new Set(
-          faits.map((fait) => fait.source.trim().toLowerCase()),
-        );
-
-        return {
-          definitionChampId: definition.id,
-          cle: definition.cle,
-          libelle: definition.libelle,
-          typeDonnee: definition.typeDonnee,
-          multiple: definition.multiple,
-          valeur: valeurs[definition.cle] ?? null,
-          faits: faits.map((fait) => this.presenterFaitDeChamp(fait)),
-          multiSources: sources.size > 1,
-        };
-      },
-    );
+    const champs = this.assemblerChamps(entite.typeEntite.champs, faitsSujet);
 
     const liens: LienDeFicheDto[] = [
       ...faitsSujet
@@ -230,6 +237,7 @@ export class EntitesService {
           fiabilite: fait.fiabilite,
           dateConstatation: this.enDate(fait.dateConstatation),
           visibilite: fait.visibilite,
+          visibiliteEffective: fait.visibiliteEffective,
         })),
       ...faitsCible.map((fait) => ({
         faitId: fait.id,
@@ -245,13 +253,19 @@ export class EntitesService {
         fiabilite: fait.fiabilite,
         dateConstatation: this.enDate(fait.dateConstatation),
         visibilite: fait.visibilite,
+        visibiliteEffective: fait.visibiliteEffective,
       })),
     ];
 
     return {
       ...this.resumer(entite, entite.typeEntite.code),
       typeLibelle: entite.typeEntite.libelle,
-      valeurs,
+      valeurs: Object.fromEntries(
+        champs
+          .filter((champ) => champ.valeur !== null)
+          .map((champ) => [champ.cle, champ.valeur]),
+      ),
+      contenuLisible: this.visibilite.contenuDEntiteLisible(agent, entite),
       note: entite.note,
       champs,
       liens,
@@ -260,8 +274,13 @@ export class EntitesService {
     };
   }
 
-  async lister(filtres: FiltresAnnuaire): Promise<EntiteResumeeDto[]> {
-    const entites = await this.prisma.entite.findMany({
+  async lister(
+    agent: AgentCourant,
+    filtres: FiltresAnnuaire,
+  ): Promise<EntiteResumeeDto[]> {
+    const client = this.visibilite.clientPour(agent);
+
+    const entites = await client.entite.findMany({
       where: {
         typeEntiteId: filtres.typeEntiteId,
         etat: filtres.etat,
@@ -284,10 +303,12 @@ export class EntitesService {
   /**
    * Détection de doublons à la frappe.
    *
-   * Deux signaux distincts : la similarité trigramme du libellé, floue, et
-   * l'identité d'une valeur unique du type, qui elle ne laisse aucun doute.
+   * **Ne propose jamais une entité privée**, sans le mentionner. Conséquence
+   * assumée : un agent peut créer un doublon d'une entité qu'il ne voit pas —
+   * aucune contre-mesure n'existe sans révéler l'existence de l'entité cachée.
    */
   async similaires(
+    agent: AgentCourant,
     q: string,
     typeEntiteId?: string,
   ): Promise<SuggestionDoublonDto[]> {
@@ -297,7 +318,11 @@ export class EntitesService {
       return [];
     }
 
-    const candidats = await this.prisma.$queryRaw<
+    const contexte = this.visibilite.contexte(agent);
+    const ouvert = contexte.superAdmin || contexte.derogationPrive;
+    const habilitees = [...contexte.entitesHabilitees];
+
+    const candidats = await this.prisma.sansFiltre.$queryRaw<
       { id: string; libelle: string; type_code: string; proximite: number }[]
     >`
       SELECT e.id, e.libelle, te.code AS type_code,
@@ -306,17 +331,26 @@ export class EntitesService {
         JOIN type_entite te ON te.id = e.type_entite_id
        WHERE e.fusionnee_vers_id IS NULL
          AND (${typeEntiteId}::uuid IS NULL OR e.type_entite_id = ${typeEntiteId}::uuid)
+         AND (${ouvert}
+              OR e.visibilite <> 'prive'
+              OR e.id = ANY(${habilitees}::uuid[]))
          AND (e.libelle ILIKE '%' || ${recherche} || '%'
               OR similarity(e.libelle, ${recherche}) > 0.25)
        ORDER BY proximite DESC, e.libelle ASC
        LIMIT 8
     `;
 
-    const identiques = await this.prisma.$queryRaw<{ entite_id: string }[]>`
+    const identiques = await this.prisma.sansFiltre.$queryRaw<
+      { entite_id: string }[]
+    >`
       SELECT vu.entite_id
         FROM valeur_unique vu
+        JOIN entite e ON e.id = vu.entite_id
        WHERE vu.valeur_normalisee = normaliser_valeur(${recherche})
          AND (${typeEntiteId}::uuid IS NULL OR vu.type_entite_id = ${typeEntiteId}::uuid)
+         AND (${ouvert}
+              OR e.visibilite <> 'prive'
+              OR e.id = ANY(${habilitees}::uuid[]))
     `;
 
     const surs = new Set(identiques.map((ligne) => ligne.entite_id));
@@ -333,18 +367,18 @@ export class EntitesService {
   // ─────────────────────────── Écriture ───────────────────────────
 
   async modifier(
-    agentId: string,
+    agent: AgentCourant,
     id: string,
     donnees: ModificationEntiteDto,
   ): Promise<FicheEntiteDto> {
-    const avant = await this.charger(id);
+    const avant = await this.visibilite.entiteVisibleOuIntrouvable(agent, id);
 
     await this.prisma.$transaction(async (transaction) => {
       await transaction.entite.update({ where: { id }, data: donnees });
 
       await this.audit.tracer(
         {
-          agentId,
+          agentId: agent.id,
           action: 'entite.modifier',
           cibleTable: 'entite',
           cibleId: id,
@@ -355,7 +389,7 @@ export class EntitesService {
       );
     });
 
-    return this.lire(id);
+    return this.lire(agent, id);
   }
 
   /**
@@ -365,11 +399,15 @@ export class EntitesService {
    * restent intacts : rien n'est jamais supprimé.
    */
   async changerEtat(
-    agentId: string,
+    agent: AgentCourant,
     id: string,
     etat: EtatEntite,
   ): Promise<FicheEntiteDto> {
-    const avant = await this.charger(id);
+    await this.visibilite.entiteVisibleOuIntrouvable(agent, id);
+
+    const avant = await this.prisma.sansFiltre.entite.findUniqueOrThrow({
+      where: { id },
+    });
 
     if (avant.etat === etat) {
       throw new ConflictException(
@@ -382,7 +420,7 @@ export class EntitesService {
 
       await this.audit.tracer(
         {
-          agentId,
+          agentId: agent.id,
           action:
             etat === EtatEntite.archive
               ? 'entite.archiver'
@@ -396,13 +434,56 @@ export class EntitesService {
       );
     });
 
-    return this.lire(id);
+    return this.lire(agent, id);
   }
 
   // ─────────────────────────── Interne ───────────────────────────
 
+  /**
+   * Recompose la projection depuis les seuls faits visibles.
+   *
+   * Un champ non renseigné — ou dont tous les faits sont masqués — reste
+   * affiché, valeur nulle : l'absence d'information est une information, et
+   * rien ne doit distinguer « jamais renseigné » de « masqué », sous peine de
+   * révéler l'existence du fait caché.
+   */
+  private assemblerChamps(
+    definitions: DefinitionChamp[],
+    faitsSujet: Fait[],
+  ): ChampDeFicheDto[] {
+    return definitions.map((definition) => {
+      const faits = faitsSujet.filter(
+        (fait) =>
+          fait.nature === NatureFait.champ &&
+          fait.definitionChampId === definition.id &&
+          fait.valeur !== null,
+      );
+
+      const sources = new Set(
+        faits.map((fait) => fait.source.trim().toLowerCase()),
+      );
+
+      const valeur = definition.multiple
+        ? faits.length > 0
+          ? faits.map((fait) => fait.valeur)
+          : null
+        : (faits[0]?.valeur ?? null);
+
+      return {
+        definitionChampId: definition.id,
+        cle: definition.cle,
+        libelle: definition.libelle,
+        typeDonnee: definition.typeDonnee,
+        multiple: definition.multiple,
+        valeur,
+        faits: faits.map((fait) => this.presenterFaitDeChamp(fait)),
+        multiSources: sources.size > 1,
+      };
+    });
+  }
+
   private async chargerType(id: string): Promise<TypeAvecChamps> {
-    const type = await this.prisma.typeEntite.findUnique({
+    const type = await this.prisma.sansFiltre.typeEntite.findUnique({
       where: { id },
       include: { champs: { orderBy: { ordre: 'asc' } } },
     });
@@ -414,14 +495,15 @@ export class EntitesService {
     return type;
   }
 
-  private async charger(id: string): Promise<Entite> {
-    const entite = await this.prisma.entite.findUnique({ where: { id } });
+  private async verifierDossier(id: string): Promise<void> {
+    const dossier = await this.prisma.sansFiltre.dossier.findUnique({
+      where: { id },
+      select: { id: true },
+    });
 
-    if (!entite) {
-      throw new NotFoundException('entité inconnue');
+    if (!dossier) {
+      throw new BadRequestException('dossier de saisie inconnu');
     }
-
-    return entite;
   }
 
   private preparerChamp(
@@ -460,10 +542,14 @@ export class EntitesService {
     }
 
     const [typesLiens, cibles] = await Promise.all([
-      this.prisma.typeLien.findMany({
+      this.prisma.sansFiltre.typeLien.findMany({
         where: { id: { in: saisis.map((lien) => lien.typeLienId) } },
       }),
-      this.prisma.entite.findMany({
+      // Sans filtre : poser un lien vers une entité qu'on ne voit pas est
+      // impossible en pratique, l'agent ne pouvant pas en connaître
+      // l'identifiant. Filtrer ici transformerait un lien légitime posé par un
+      // agent habilité en « cible inconnue ».
+      this.prisma.sansFiltre.entite.findMany({
         where: { id: { in: saisis.map((lien) => lien.cibleId) } },
       }),
     ]);
@@ -568,6 +654,7 @@ export class EntitesService {
       fiabilite: fait.fiabilite,
       dateConstatation: this.enDate(fait.dateConstatation),
       visibilite: fait.visibilite,
+      visibiliteEffective: fait.visibiliteEffective,
     };
   }
 

@@ -13,7 +13,6 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { EtatEntite } from '@prisma/client';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -21,6 +20,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { EtatEntite } from '@prisma/client';
 
 import { PERMISSIONS } from '../agents/permissions';
 import { Agent, type AgentCourant } from '../auth/agent-courant';
@@ -42,12 +42,17 @@ export class EntitesController {
 
   @Get()
   @SansPermission()
-  @ApiOperation({ summary: 'Annuaire filtrable' })
+  @ApiOperation({
+    summary: 'Annuaire filtrable',
+    description:
+      'Les entités privées en sont absentes, sans mention — un décompte manquant révélerait leur existence.',
+  })
   @ApiQuery({ name: 'type', required: false, format: 'uuid' })
   @ApiQuery({ name: 'q', required: false })
   @ApiQuery({ name: 'etat', required: false, enum: EtatEntite })
   @ApiResponse({ status: 200, type: [EntiteResumeeDto] })
   lister(
+    @Agent() agent: AgentCourant,
     @Query('type') typeEntiteId?: string,
     @Query('q') q?: string,
     @Query('etat', new ParseEnumPipe(EtatEntite, { optional: true }))
@@ -55,7 +60,7 @@ export class EntitesController {
     @Query('limite', new DefaultValuePipe(50), ParseIntPipe) limite = 50,
     @Query('decalage', new DefaultValuePipe(0), ParseIntPipe) decalage = 0,
   ): Promise<EntiteResumeeDto[]> {
-    return this.entites.lister({
+    return this.entites.lister(agent, {
       typeEntiteId,
       q,
       etat,
@@ -69,16 +74,17 @@ export class EntitesController {
   @ApiOperation({
     summary: 'Détection de doublons à la frappe',
     description:
-      'Similarité trigramme du libellé, et identité exacte d’une valeur unique du type — ce second signal ne laisse aucun doute.',
+      'Similarité trigramme du libellé, et identité exacte d’une valeur unique du type. Ne propose jamais une entité privée.',
   })
   @ApiQuery({ name: 'q', required: true })
   @ApiQuery({ name: 'type', required: false, format: 'uuid' })
   @ApiResponse({ status: 200, type: [SuggestionDoublonDto] })
   similaires(
+    @Agent() agent: AgentCourant,
     @Query('q') q: string,
     @Query('type') typeEntiteId?: string,
   ): Promise<SuggestionDoublonDto[]> {
-    return this.entites.similaires(q ?? '', typeEntiteId);
+    return this.entites.similaires(agent, q ?? '', typeEntiteId);
   }
 
   @Get(':id')
@@ -86,11 +92,19 @@ export class EntitesController {
   @ApiOperation({
     summary: 'Fiche assemblée',
     description:
-      'Champs projetés avec les faits qui les soutiennent, et liens lus depuis cette fiche — un lien est une arête unique, vue des deux côtés.',
+      'Champs projetés depuis les seuls faits visibles par l’agent, et liens lus depuis cette fiche — un lien est une arête unique, vue des deux côtés.',
   })
   @ApiResponse({ status: 200, type: FicheEntiteDto })
-  lire(@Param('id', ParseUUIDPipe) id: string): Promise<FicheEntiteDto> {
-    return this.entites.lire(id);
+  @ApiResponse({
+    status: 404,
+    description:
+      'Inconnue, ou privée sans habilitation — jamais 403, qui confirmerait son existence',
+  })
+  lire(
+    @Agent() agent: AgentCourant,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<FicheEntiteDto> {
+    return this.entites.lire(agent, id);
   }
 
   @Post()
@@ -106,7 +120,7 @@ export class EntitesController {
     @Agent() agent: AgentCourant,
     @Body() corps: CreationEntiteDto,
   ): Promise<FicheEntiteDto> {
-    return this.entites.creer(agent.id, corps);
+    return this.entites.creer(agent, corps);
   }
 
   @Patch(':id')
@@ -117,7 +131,7 @@ export class EntitesController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() corps: ModificationEntiteDto,
   ): Promise<FicheEntiteDto> {
-    return this.entites.modifier(agent.id, id, corps);
+    return this.entites.modifier(agent, id, corps);
   }
 
   @Post(':id/archiver')
@@ -133,7 +147,7 @@ export class EntitesController {
     @Agent() agent: AgentCourant,
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<FicheEntiteDto> {
-    return this.entites.changerEtat(agent.id, id, EtatEntite.archive);
+    return this.entites.changerEtat(agent, id, EtatEntite.archive);
   }
 
   @Post(':id/desarchiver')
@@ -144,6 +158,6 @@ export class EntitesController {
     @Agent() agent: AgentCourant,
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<FicheEntiteDto> {
-    return this.entites.changerEtat(agent.id, id, EtatEntite.actif);
+    return this.entites.changerEtat(agent, id, EtatEntite.actif);
   }
 }

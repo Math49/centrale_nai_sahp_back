@@ -37,7 +37,7 @@ export class FaitsController {
     @Agent() agent: AgentCourant,
     @Body() corps: CreationFaitDto,
   ): Promise<FaitDto> {
-    return this.faits.creer(agent.id, corps);
+    return this.faits.creer(agent, corps);
   }
 
   @Patch(':id')
@@ -53,6 +53,6 @@ export class FaitsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() corps: ModificationFaitDto,
   ): Promise<FaitDto> {
-    return this.faits.modifier(agent.id, id, corps);
+    return this.faits.modifier(agent, id, corps);
   }
 }

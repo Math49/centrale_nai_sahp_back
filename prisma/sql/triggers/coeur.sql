@@ -2,6 +2,11 @@
 --
 -- Frontière retenue : la base garantit que la donnée ne peut pas devenir
 -- incohérente, l'application décide qui a le droit de la voir.
+--
+-- Les triggers de mise à jour portent une clause WHEN qui les restreint aux
+-- colonnes dont ils dépendent. Sans elle, les cascades de visibilité — qui
+-- réécrivent `visibilite_effective` en masse — relanceraient la projection et
+-- le recalcul d'unicité de chaque fait touché, pour rien.
 
 -- ─── Projection des faits sur l'entité, et recalcul du libellé ───
 
@@ -26,8 +31,22 @@ $$ LANGUAGE plpgsql;
 
 DROP TRIGGER IF EXISTS trg_fait_projection ON fait;
 CREATE TRIGGER trg_fait_projection
-AFTER INSERT OR UPDATE OR DELETE ON fait
+AFTER INSERT OR DELETE ON fait
 FOR EACH ROW EXECUTE FUNCTION fait_projection();
+
+DROP TRIGGER IF EXISTS trg_fait_projection_maj ON fait;
+CREATE TRIGGER trg_fait_projection_maj
+AFTER UPDATE ON fait
+FOR EACH ROW
+WHEN (
+     OLD.valeur              IS DISTINCT FROM NEW.valeur
+  OR OLD.etat                IS DISTINCT FROM NEW.etat
+  OR OLD.sujet_id            IS DISTINCT FROM NEW.sujet_id
+  OR OLD.definition_champ_id IS DISTINCT FROM NEW.definition_champ_id
+  OR OLD.fiabilite           IS DISTINCT FROM NEW.fiabilite
+  OR OLD.date_constatation   IS DISTINCT FROM NEW.date_constatation
+)
+EXECUTE FUNCTION fait_projection();
 
 -- ─── Unicité des champs marqués uniques ───
 
@@ -51,8 +70,20 @@ $$ LANGUAGE plpgsql;
 
 DROP TRIGGER IF EXISTS trg_fait_unicite ON fait;
 CREATE TRIGGER trg_fait_unicite
-AFTER INSERT OR UPDATE OR DELETE ON fait
+AFTER INSERT OR DELETE ON fait
 FOR EACH ROW EXECUTE FUNCTION fait_unicite();
+
+DROP TRIGGER IF EXISTS trg_fait_unicite_maj ON fait;
+CREATE TRIGGER trg_fait_unicite_maj
+AFTER UPDATE ON fait
+FOR EACH ROW
+WHEN (
+     OLD.valeur              IS DISTINCT FROM NEW.valeur
+  OR OLD.etat                IS DISTINCT FROM NEW.etat
+  OR OLD.sujet_id            IS DISTINCT FROM NEW.sujet_id
+  OR OLD.definition_champ_id IS DISTINCT FROM NEW.definition_champ_id
+)
+EXECUTE FUNCTION fait_unicite();
 
 -- ─── Reprojection après changement de gabarit ───
 --

@@ -118,8 +118,36 @@ privé. L'accès au contenu exige d'être habilité auprès de **tous** les gard
 ou de disposer de la dérogation correspondante. Exiger un seul gardien serait
 une fuite.
 
-**Une seule implémentation** — le service `visibilite`, qui n'expose aucune
-route. Ne jamais réécrire la règle ailleurs.
+**Une seule implémentation** — `src/visibilite/predicats.ts`, servi par le
+service `visibilite`, qui n'expose aucune route. Ne jamais réécrire la règle
+ailleurs.
+
+### Comment lire, en pratique
+
+```ts
+const client = this.visibilite.clientPour(agent);   // filtré
+this.prisma.sansFiltre.entite.findUnique(...)       // à justifier en revue
+```
+
+`pourAgent()` construit un client Prisma étendu dont **chaque lecture**
+d'entité, de fait et de dossier porte le prédicat. Un service qui oublierait de
+filtrer lit quand même filtré : c'est tout l'intérêt de le poser là.
+
+Trois pièges à connaître :
+
+- **`entite.valeurs` ignore la visibilité.** La colonne agrège tous les faits.
+  La servir telle quelle est la fuite la plus facile à commettre : la fiche
+  recompose sa projection depuis les seuls faits visibles.
+- **`PrismaClient` renvoie un Proxy depuis son constructeur.** Dans une méthode
+  appelée à travers lui, `this` désigne l'objet enveloppé, dépourvu des
+  accesseurs de modèles. `PrismaService` capture le Proxy dans son constructeur.
+- **Aucune whitelist ne porte sur un fait.** L'habilitation existe par dossier
+  et par entité seulement : marquer un fait restreint revient donc à le réserver
+  à qui détient la dérogation correspondante.
+
+Les deux dérogations ne sont pas indépendantes : `acces.derogatoire.prive` ouvre
+aussi le restreint. L'inverse produirait un agent autorisé sur le privé mais
+bloqué sur le moins sensible.
 
 ### Les six vecteurs de fuite par déduction
 
@@ -226,7 +254,7 @@ applique les migrations avant de lancer jest.
 | 1 — Authentification et agents | fait |
 | 3 — Référentiel | fait |
 | 4 — Entités et faits | fait |
-| 5 — Visibilité et permissions | à faire |
+| 5 — Visibilité et permissions | fait |
 | 7 — Fiche entité (back) | à faire |
 | 8 — Dossiers | à faire |
 | 9 — Graphe | à faire |
