@@ -1345,6 +1345,46 @@
         ]
       }
     },
+    "/entites/{id}/historique": {
+      "get": {
+        "description": "Faits infirmés ou archivés — jamais supprimés, toujours consultables — et traces d’écriture du journal d’audit.",
+        "operationId": "EntitesController_historique",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EvenementHistoriqueDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Onglet Historique",
+        "tags": [
+          "entites"
+        ]
+      }
+    },
     "/entites/{id}/annuler-creation": {
       "post": {
         "description": "Retire une entité que le sous-formulaire venait de persister et que l’agent abandonne. Réservée à son auteur, dans l’heure, sur une entité que rien d’autre ne désigne — au-delà, seul l’archivage sort.",
@@ -2783,6 +2823,39 @@
           "visibiliteEffective"
         ]
       },
+      "OngletPeupleDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "libelle": {
+            "type": "string",
+            "example": "Membres"
+          },
+          "ordre": {
+            "type": "number"
+          },
+          "compteur": {
+            "type": "number",
+            "description": "Ne compte que les liens visibles par cet agent — un compteur exhaustif révélerait ce qui est masqué"
+          },
+          "liens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LienDeFicheDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "libelle",
+          "ordre",
+          "compteur",
+          "liens"
+        ]
+      },
       "FicheEntiteDto": {
         "type": "object",
         "properties": {
@@ -2841,7 +2914,22 @@
               "$ref": "#/components/schemas/ChampDeFicheDto"
             }
           },
+          "onglets": {
+            "description": "Onglets configurés pour ce type d’entité, déjà peuplés de leurs liens",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OngletPeupleDto"
+            }
+          },
+          "liensHorsOnglet": {
+            "description": "Liens qu’aucun onglet ne regroupe — ils resteraient invisibles sinon, ce qui ferait passer une erreur de configuration pour une absence de donnée",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LienDeFicheDto"
+            }
+          },
           "liens": {
+            "description": "Tous les liens visibles, à plat",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/LienDeFicheDto"
@@ -2870,9 +2958,56 @@
           "contenuLisible",
           "note",
           "champs",
+          "onglets",
+          "liensHorsOnglet",
           "liens",
           "creeLe",
           "fusionneeVersId"
+        ]
+      },
+      "EvenementHistoriqueDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nature": {
+            "enum": [
+              "fait",
+              "modification"
+            ],
+            "type": "string",
+            "description": "Un fait sorti du graphe actif, ou une trace d’écriture du journal d’audit"
+          },
+          "libelle": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "nullable": true
+          },
+          "fiabilite": {
+            "type": "number",
+            "nullable": true
+          },
+          "auteur": {
+            "type": "string",
+            "nullable": true,
+            "description": "« agent supprimé » lorsque le compte a été anonymisé"
+          },
+          "survenuLe": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "nature",
+          "libelle",
+          "source",
+          "fiabilite",
+          "auteur",
+          "survenuLe"
         ]
       },
       "ChampSaisiDto": {

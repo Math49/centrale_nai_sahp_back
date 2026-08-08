@@ -259,7 +259,7 @@ applique les migrations avant de lancer jest.
 | 3 — Référentiel | fait |
 | 4 — Entités et faits | fait |
 | 5 — Visibilité et permissions | fait |
-| 7 — Fiche entité (back) | à faire |
+| 7 — Fiche entité (back) | fait |
 | 8 — Dossiers | à faire |
 | 9 — Graphe | à faire |
 | 10 — Signaux | à faire |

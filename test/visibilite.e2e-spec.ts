@@ -498,6 +498,79 @@ describe('Lot 5 — visibilité (e2e)', () => {
     });
   });
 
+  describe('fiche assemblée — onglets et compteurs', () => {
+    it('livre les onglets du type, déjà peuplés', async () => {
+      const vue = await fiche(etatMajor, idAgentX);
+
+      // Le type Personne porte trois onglets dans le référentiel de référence.
+      expect(vue.onglets.map((onglet) => onglet.libelle)).toEqual([
+        'Appartenance',
+        'Véhicules',
+        'Événements',
+      ]);
+    });
+
+    it('ne place aucun lien hors onglet quand la mise en page est complète', async () => {
+      const vue = await fiche(etatMajor, idAgentX);
+
+      // Un lien qu'aucun onglet ne regroupe doit rester visible : une erreur
+      // de configuration ne doit pas passer pour une absence de donnée.
+      expect(vue.liensHorsOnglet).toEqual([]);
+    });
+
+    it('compte, dans chaque onglet, ce que l’agent voit et rien de plus', async () => {
+      const [vuJunior, vuEtatMajor] = await Promise.all([
+        fiche(junior, idAgentX),
+        fiche(etatMajor, idAgentX),
+      ]);
+
+      const compteur = (vue: FicheEntiteDto, libelle: string) =>
+        vue.onglets.find((onglet) => onglet.libelle === libelle)?.compteur ??
+        -1;
+
+      expect(compteur(vuJunior, 'Véhicules')).toBe(0);
+      expect(compteur(vuEtatMajor, 'Véhicules')).toBe(1);
+    });
+
+    it('un onglet ne contient que les liens qu’il regroupe', async () => {
+      const vue = await fiche(etatMajor, idAgentX);
+      const vehicules = vue.onglets.find(
+        (onglet) => onglet.libelle === 'Véhicules',
+      )!;
+
+      expect(vehicules.liens).toHaveLength(vehicules.compteur);
+      expect(vehicules.liens[0].autreEntite.typeCode).toBe('vehicule');
+    });
+  });
+
+  describe('historique', () => {
+    it('est refusé sans la permission', async () => {
+      await request(serveur)
+        .get(`/entites/${idAgentX}/historique`)
+        .set(enTantQue(junior))
+        .expect(403);
+    });
+
+    it('rend les traces d’écriture à qui détient la permission', async () => {
+      const reponse = await request(serveur)
+        .get(`/entites/${idAgentX}/historique`)
+        .set(enTantQue(etatMajor))
+        .expect(200);
+
+      const evenements = reponse.body as {
+        nature: string;
+        libelle: string;
+        auteur: string | null;
+      }[];
+
+      expect(evenements.length).toBeGreaterThan(0);
+      expect(
+        evenements.some((element) => element.libelle === 'entite.creer'),
+      ).toBe(true);
+      expect(evenements[0].auteur).toEqual(expect.any(String));
+    });
+  });
+
   describe('cascades', () => {
     it('rendre un dossier public rouvre aussitôt ce qui en vient', async () => {
       await dossiers.definirVisibilite(

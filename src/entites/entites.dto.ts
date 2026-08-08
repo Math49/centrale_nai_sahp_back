@@ -225,6 +225,44 @@ export class LienDeFicheDto {
   @ApiProperty({ enum: Visibilite }) visibiliteEffective!: Visibilite;
 }
 
+export class OngletPeupleDto {
+  @ApiProperty({ format: 'uuid' }) id!: string;
+  @ApiProperty({ example: 'Membres' }) libelle!: string;
+  @ApiProperty() ordre!: number;
+
+  @ApiProperty({
+    description:
+      'Ne compte que les liens visibles par cet agent — un compteur exhaustif révélerait ce qui est masqué',
+  })
+  compteur!: number;
+
+  @ApiProperty({ type: [LienDeFicheDto] }) liens!: LienDeFicheDto[];
+}
+
+export class EvenementHistoriqueDto {
+  @ApiProperty() id!: string;
+
+  @ApiProperty({
+    enum: ['fait', 'modification'],
+    description:
+      'Un fait sorti du graphe actif, ou une trace d’écriture du journal d’audit',
+  })
+  nature!: 'fait' | 'modification';
+
+  @ApiProperty() libelle!: string;
+
+  @ApiProperty({ nullable: true }) source!: string | null;
+  @ApiProperty({ nullable: true }) fiabilite!: number | null;
+
+  @ApiProperty({
+    nullable: true,
+    description: '« agent supprimé » lorsque le compte a été anonymisé',
+  })
+  auteur!: string | null;
+
+  @ApiProperty({ format: 'date-time' }) survenuLe!: string;
+}
+
 export class EntiteResumeeDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
   @ApiProperty({ format: 'uuid' }) typeEntiteId!: string;
@@ -252,7 +290,26 @@ export class FicheEntiteDto extends EntiteResumeeDto {
 
   @ApiProperty({ nullable: true }) note!: string | null;
   @ApiProperty({ type: [ChampDeFicheDto] }) champs!: ChampDeFicheDto[];
-  @ApiProperty({ type: [LienDeFicheDto] }) liens!: LienDeFicheDto[];
+
+  @ApiProperty({
+    type: [OngletPeupleDto],
+    description:
+      'Onglets configurés pour ce type d’entité, déjà peuplés de leurs liens',
+  })
+  onglets!: OngletPeupleDto[];
+
+  @ApiProperty({
+    type: [LienDeFicheDto],
+    description:
+      'Liens qu’aucun onglet ne regroupe — ils resteraient invisibles sinon, ce qui ferait passer une erreur de configuration pour une absence de donnée',
+  })
+  liensHorsOnglet!: LienDeFicheDto[];
+
+  @ApiProperty({
+    type: [LienDeFicheDto],
+    description: 'Tous les liens visibles, à plat',
+  })
+  liens!: LienDeFicheDto[];
   @ApiProperty({ format: 'date-time' }) creeLe!: string;
 
   @ApiProperty({ nullable: true, format: 'uuid' })

@@ -25,6 +25,7 @@ import type {
   ChampSaisiDto,
   CreationEntiteDto,
   EntiteResumeeDto,
+  EvenementHistoriqueDto,
   FicheEntiteDto,
   LienDeFicheDto,
   LienSaisiDto,
@@ -198,7 +199,15 @@ export class EntitesService {
     const entite = await this.prisma.sansFiltre.entite.findUniqueOrThrow({
       where: { id: controle.id },
       include: {
-        typeEntite: { include: { champs: { orderBy: { ordre: 'asc' } } } },
+        typeEntite: {
+          include: {
+            champs: { orderBy: { ordre: 'asc' } },
+            onglets: {
+              orderBy: { ordre: 'asc' },
+              include: { typesLiens: { orderBy: { ordre: 'asc' } } },
+            },
+          },
+        },
       },
     });
 
@@ -260,6 +269,32 @@ export class EntitesService {
       })),
     ];
 
+    // Les onglets sont peuplés ici, et non par le front : les assembler
+    // là-bas supposerait qu'il connaisse la règle des gardiens, donc qu'elle
+    // existe en deux exemplaires.
+    const regroupes = new Set<string>();
+
+    const onglets = entite.typeEntite.onglets.map((onglet) => {
+      const appartient = (lien: LienDeFicheDto) =>
+        onglet.typesLiens.some(
+          (entree) =>
+            entree.typeLienId === lien.typeLienId && entree.sens === lien.sens,
+        );
+
+      const contenu = liens.filter(appartient);
+      contenu.forEach((lien) => regroupes.add(lien.faitId));
+
+      return {
+        id: onglet.id,
+        libelle: onglet.libelle,
+        ordre: onglet.ordre,
+        // Le compteur donne l'échelle de la fiche sans avoir à cliquer, et ne
+        // compte que ce que l'agent peut voir.
+        compteur: contenu.length,
+        liens: contenu,
+      };
+    });
+
     return {
       ...this.resumer(entite, entite.typeEntite.code),
       typeLibelle: entite.typeEntite.libelle,
@@ -271,10 +306,95 @@ export class EntitesService {
       contenuLisible: this.visibilite.contenuDEntiteLisible(agent, entite),
       note: entite.note,
       champs,
+      onglets,
+      liensHorsOnglet: liens.filter((lien) => !regroupes.has(lien.faitId)),
       liens,
       creeLe: entite.creeLe.toISOString(),
       fusionneeVersId: entite.fusionneeVersId,
     };
+  }
+
+  /**
+   * Onglet Historique : ce qui est sorti du graphe actif, et ce qui a changé.
+   *
+   * Deux sources en une : les faits infirmés ou archivés — qui ne sont jamais
+   * supprimés et restent consultables — et les traces d'écriture du journal
+   * d'audit. Soumis à la permission `historique.consulter`.
+   */
+  async historique(
+    agent: AgentCourant,
+    id: string,
+  ): Promise<EvenementHistoriqueDto[]> {
+    await this.visibilite.entiteVisibleOuIntrouvable(agent, id);
+
+    const client = this.visibilite.clientPour(agent);
+
+    const [inactifs, visibles] = await Promise.all([
+      client.fait.findMany({
+        where: { sujetId: id, etat: { not: EtatFait.actif } },
+        include: {
+          definitionChamp: true,
+          typeLien: true,
+          cible: true,
+          auteur: true,
+        },
+        orderBy: { modifieLe: 'desc' },
+      }),
+      client.fait.findMany({ where: { sujetId: id }, select: { id: true } }),
+    ]);
+
+    const traces = await this.prisma.sansFiltre.journalAudit.findMany({
+      where: {
+        OR: [
+          { cibleTable: 'entite', cibleId: id },
+          {
+            cibleTable: 'fait',
+            cibleId: { in: visibles.map((fait) => fait.id) },
+          },
+        ],
+      },
+      include: { agent: true },
+      orderBy: { effectueLe: 'desc' },
+      take: 100,
+    });
+
+    const evenements: EvenementHistoriqueDto[] = [
+      ...inactifs.map((fait) => ({
+        id: fait.id,
+        nature: 'fait' as const,
+        libelle:
+          fait.nature === NatureFait.champ
+            ? `${fait.definitionChamp?.libelle ?? 'champ'} — ${fait.etat}`
+            : `${fait.typeLien?.libelle ?? 'lien'} ${fait.cible?.libelle ?? ''} — ${fait.etat}`,
+        source: fait.source,
+        fiabilite: fait.fiabilite,
+        auteur: this.nommerAuteur(fait.auteur),
+        survenuLe: fait.modifieLe.toISOString(),
+      })),
+      ...traces.map((trace) => ({
+        // `journal_audit.id` est un bigserial, que JSON.stringify ne sait pas
+        // sérialiser : il se convertit ici, pas plus loin.
+        id: trace.id.toString(),
+        nature: 'modification' as const,
+        libelle: trace.action,
+        source: null,
+        fiabilite: null,
+        auteur: this.nommerAuteur(trace.agent),
+        survenuLe: trace.effectueLe.toISOString(),
+      })),
+    ];
+
+    return evenements.sort((a, b) => b.survenuLe.localeCompare(a.survenuLe));
+  }
+
+  private nommerAuteur(
+    agent: { prenom: string; nom: string; anonymise: boolean } | null,
+  ): string | null {
+    if (!agent) {
+      return null;
+    }
+
+    return agent.anonymise ? 'agent supprimé' : `${agent.prenom} ${agent.nom}`;
   }
 
   async lister(

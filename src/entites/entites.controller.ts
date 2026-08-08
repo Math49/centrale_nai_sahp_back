@@ -28,6 +28,7 @@ import { Permissions, SansPermission } from '../auth/decorateurs';
 import {
   CreationEntiteDto,
   EntiteResumeeDto,
+  EvenementHistoriqueDto,
   FicheEntiteDto,
   ModificationEntiteDto,
   SuggestionDoublonDto,
@@ -105,6 +106,21 @@ export class EntitesController {
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<FicheEntiteDto> {
     return this.entites.lire(agent, id);
+  }
+
+  @Get(':id/historique')
+  @Permissions(PERMISSIONS.HISTORIQUE_CONSULTER)
+  @ApiOperation({
+    summary: 'Onglet Historique',
+    description:
+      'Faits infirmés ou archivés — jamais supprimés, toujours consultables — et traces d’écriture du journal d’audit.',
+  })
+  @ApiResponse({ status: 200, type: [EvenementHistoriqueDto] })
+  historique(
+    @Agent() agent: AgentCourant,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<EvenementHistoriqueDto[]> {
+    return this.entites.historique(agent, id);
   }
 
   @Post()
