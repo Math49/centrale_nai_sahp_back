@@ -1101,6 +1101,403 @@
         ]
       }
     },
+    "/entites": {
+      "get": {
+        "operationId": "EntitesController_lister",
+        "parameters": [
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "etat",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "actif",
+                "archive"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "decalage",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "limite",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EntiteResumeeDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Annuaire filtrable",
+        "tags": [
+          "entites"
+        ]
+      },
+      "post": {
+        "description": "Source, fiabilité et date de constatation données au niveau de la requête servent de valeurs par défaut à chaque fait — c’est le bandeau de source active.",
+        "operationId": "EntitesController_creer",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreationEntiteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FicheEntiteDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Valeur unique déjà attribuée"
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Création d’une entité et de ses premiers faits",
+        "tags": [
+          "entites"
+        ]
+      }
+    },
+    "/entites/similaires": {
+      "get": {
+        "description": "Similarité trigramme du libellé, et identité exacte d’une valeur unique du type — ce second signal ne laisse aucun doute.",
+        "operationId": "EntitesController_similaires",
+        "parameters": [
+          {
+            "name": "q",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SuggestionDoublonDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Détection de doublons à la frappe",
+        "tags": [
+          "entites"
+        ]
+      }
+    },
+    "/entites/{id}": {
+      "get": {
+        "description": "Champs projetés avec les faits qui les soutiennent, et liens lus depuis cette fiche — un lien est une arête unique, vue des deux côtés.",
+        "operationId": "EntitesController_lire",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FicheEntiteDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Fiche assemblée",
+        "tags": [
+          "entites"
+        ]
+      },
+      "patch": {
+        "operationId": "EntitesController_modifier",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificationEntiteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FicheEntiteDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "tags": [
+          "entites"
+        ]
+      }
+    },
+    "/entites/{id}/archiver": {
+      "post": {
+        "description": "Rien n’est jamais supprimé : l’entité sort des écrans courants et reste consultable, ses faits intacts.",
+        "operationId": "EntitesController_archiver",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FicheEntiteDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Archivage",
+        "tags": [
+          "entites"
+        ]
+      }
+    },
+    "/entites/{id}/desarchiver": {
+      "post": {
+        "operationId": "EntitesController_desarchiver",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FicheEntiteDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "tags": [
+          "entites"
+        ]
+      }
+    },
+    "/faits": {
+      "post": {
+        "description": "Un lien créé ici est lisible depuis ses deux extrémités : une seule arête est stockée.",
+        "operationId": "FaitsController_creer",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreationFaitDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FaitDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Ajout d’un fait à une entité existante",
+        "tags": [
+          "faits"
+        ]
+      }
+    },
+    "/faits/{id}": {
+      "patch": {
+        "description": "La cible d’un lien ne se corrige pas : un lien mal posé s’infirme et se refait.",
+        "operationId": "FaitsController_modifier",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificationFaitDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FaitDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Correction d’un fait",
+        "tags": [
+          "faits"
+        ]
+      }
+    },
     "/sante": {
       "get": {
         "operationId": "SanteController_lire",
@@ -2049,6 +2446,682 @@
         "required": [
           "typesLiens"
         ]
+      },
+      "EntiteResumeeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "typeEntiteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "typeCode": {
+            "type": "string"
+          },
+          "libelle": {
+            "type": "string"
+          },
+          "visibilite": {
+            "enum": [
+              "public",
+              "restreint",
+              "prive"
+            ],
+            "type": "string"
+          },
+          "etat": {
+            "enum": [
+              "actif",
+              "archive"
+            ],
+            "type": "string"
+          },
+          "modifieLe": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "typeEntiteId",
+          "typeCode",
+          "libelle",
+          "visibilite",
+          "etat",
+          "modifieLe"
+        ]
+      },
+      "SuggestionDoublonDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "libelle": {
+            "type": "string"
+          },
+          "typeCode": {
+            "type": "string"
+          },
+          "proximite": {
+            "type": "number",
+            "description": "Similarité trigramme du libellé, entre 0 et 1"
+          },
+          "valeurUniqueIdentique": {
+            "type": "boolean",
+            "description": "Une valeur unique du type est identique — c’est un doublon sûr"
+          }
+        },
+        "required": [
+          "id",
+          "libelle",
+          "typeCode",
+          "proximite",
+          "valeurUniqueIdentique"
+        ]
+      },
+      "FaitDeChampDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "valeur": {
+            "type": "object"
+          },
+          "source": {
+            "type": "string"
+          },
+          "fiabilite": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 4
+          },
+          "dateConstatation": {
+            "type": "string",
+            "format": "date"
+          },
+          "visibilite": {
+            "enum": [
+              "public",
+              "restreint",
+              "prive"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "valeur",
+          "source",
+          "fiabilite",
+          "dateConstatation",
+          "visibilite"
+        ]
+      },
+      "ChampDeFicheDto": {
+        "type": "object",
+        "properties": {
+          "definitionChampId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cle": {
+            "type": "string"
+          },
+          "libelle": {
+            "type": "string"
+          },
+          "typeDonnee": {
+            "enum": [
+              "texte",
+              "nombre",
+              "date",
+              "datetime",
+              "booleen",
+              "liste",
+              "fichier"
+            ],
+            "type": "string"
+          },
+          "multiple": {
+            "type": "boolean"
+          },
+          "valeur": {
+            "type": "object",
+            "description": "Valeur projetée, celle qui s’affiche en évidence"
+          },
+          "faits": {
+            "description": "Les faits qui la soutiennent. Plus d’un signale un recoupement de sources.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FaitDeChampDto"
+            }
+          },
+          "multiSources": {
+            "type": "boolean",
+            "description": "Plusieurs sources distinctes affirment la même valeur"
+          }
+        },
+        "required": [
+          "definitionChampId",
+          "cle",
+          "libelle",
+          "typeDonnee",
+          "multiple",
+          "valeur",
+          "faits",
+          "multiSources"
+        ]
+      },
+      "ExtremiteDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "libelle": {
+            "type": "string"
+          },
+          "typeCode": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "libelle",
+          "typeCode"
+        ]
+      },
+      "LienDeFicheDto": {
+        "type": "object",
+        "properties": {
+          "faitId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identifiant du fait"
+          },
+          "sens": {
+            "enum": [
+              "direct",
+              "inverse"
+            ],
+            "type": "string",
+            "description": "Le même fait, vu depuis l’une ou l’autre extrémité. Une seule arête existe en base."
+          },
+          "typeLienId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "libelle": {
+            "type": "string",
+            "description": "Libellé lu depuis cette fiche"
+          },
+          "autreEntite": {
+            "$ref": "#/components/schemas/ExtremiteDto"
+          },
+          "source": {
+            "type": "string"
+          },
+          "fiabilite": {
+            "type": "number"
+          },
+          "dateConstatation": {
+            "type": "string",
+            "format": "date"
+          },
+          "visibilite": {
+            "enum": [
+              "public",
+              "restreint",
+              "prive"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "faitId",
+          "sens",
+          "typeLienId",
+          "libelle",
+          "autreEntite",
+          "source",
+          "fiabilite",
+          "dateConstatation",
+          "visibilite"
+        ]
+      },
+      "FicheEntiteDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "typeEntiteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "typeCode": {
+            "type": "string"
+          },
+          "libelle": {
+            "type": "string"
+          },
+          "visibilite": {
+            "enum": [
+              "public",
+              "restreint",
+              "prive"
+            ],
+            "type": "string"
+          },
+          "etat": {
+            "enum": [
+              "actif",
+              "archive"
+            ],
+            "type": "string"
+          },
+          "modifieLe": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "typeLibelle": {
+            "type": "string"
+          },
+          "valeurs": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Projection des faits, maintenue par trigger"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "champs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChampDeFicheDto"
+            }
+          },
+          "liens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LienDeFicheDto"
+            }
+          },
+          "creeLe": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "fusionneeVersId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id",
+          "typeEntiteId",
+          "typeCode",
+          "libelle",
+          "visibilite",
+          "etat",
+          "modifieLe",
+          "typeLibelle",
+          "valeurs",
+          "note",
+          "champs",
+          "liens",
+          "creeLe",
+          "fusionneeVersId"
+        ]
+      },
+      "ChampSaisiDto": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "example": "Rapport d'intervention n°2291"
+          },
+          "fiabilite": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 4
+          },
+          "dateConstatation": {
+            "type": "string",
+            "example": "2026-08-07",
+            "format": "date"
+          },
+          "visibilite": {
+            "enum": [
+              "public",
+              "restreint",
+              "prive"
+            ],
+            "type": "string"
+          },
+          "definitionChampId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "valeur": {
+            "type": "object",
+            "description": "Texte, nombre, booléen ou valeur de liste, selon le type du champ"
+          }
+        },
+        "required": [
+          "definitionChampId",
+          "valeur"
+        ]
+      },
+      "LienSaisiDto": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "example": "Rapport d'intervention n°2291"
+          },
+          "fiabilite": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 4
+          },
+          "dateConstatation": {
+            "type": "string",
+            "example": "2026-08-07",
+            "format": "date"
+          },
+          "visibilite": {
+            "enum": [
+              "public",
+              "restreint",
+              "prive"
+            ],
+            "type": "string"
+          },
+          "typeLienId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cibleId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "typeLienId",
+          "cibleId"
+        ]
+      },
+      "CreationEntiteDto": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "example": "Rapport d'intervention n°2291"
+          },
+          "fiabilite": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 4
+          },
+          "dateConstatation": {
+            "type": "string",
+            "example": "2026-08-07",
+            "format": "date"
+          },
+          "visibilite": {
+            "enum": [
+              "public",
+              "restreint",
+              "prive"
+            ],
+            "type": "string"
+          },
+          "typeEntiteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 10000,
+            "description": "Champ libre, sans source ni fiabilité — ce n’est pas un fait"
+          },
+          "champs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChampSaisiDto"
+            }
+          },
+          "liens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LienSaisiDto"
+            }
+          }
+        },
+        "required": [
+          "typeEntiteId"
+        ]
+      },
+      "ModificationEntiteDto": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "maxLength": 10000
+          },
+          "visibilite": {
+            "enum": [
+              "public",
+              "restreint",
+              "prive"
+            ],
+            "type": "string",
+            "description": "Exige la permission visibilite.definir"
+          }
+        }
+      },
+      "CreationFaitDto": {
+        "type": "object",
+        "properties": {
+          "sujetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nature": {
+            "enum": [
+              "champ",
+              "lien"
+            ],
+            "type": "string"
+          },
+          "definitionChampId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Si nature = champ"
+          },
+          "valeur": {
+            "type": "object",
+            "description": "Si nature = champ"
+          },
+          "typeLienId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Si nature = lien"
+          },
+          "cibleId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Si nature = lien"
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "example": "Rapport d'intervention n°2291"
+          },
+          "fiabilite": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 4
+          },
+          "dateConstatation": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-08-07"
+          },
+          "visibilite": {
+            "enum": [
+              "public",
+              "restreint",
+              "prive"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "sujetId",
+          "nature",
+          "source",
+          "fiabilite",
+          "dateConstatation"
+        ]
+      },
+      "FaitDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sujetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nature": {
+            "enum": [
+              "champ",
+              "lien"
+            ],
+            "type": "string"
+          },
+          "definitionChampId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "valeur": {
+            "type": "object",
+            "nullable": true
+          },
+          "typeLienId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "cibleId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "source": {
+            "type": "string"
+          },
+          "fiabilite": {
+            "type": "number"
+          },
+          "dateConstatation": {
+            "type": "string",
+            "format": "date"
+          },
+          "etat": {
+            "enum": [
+              "actif",
+              "infirme",
+              "archive"
+            ],
+            "type": "string"
+          },
+          "visibilite": {
+            "enum": [
+              "public",
+              "restreint",
+              "prive"
+            ],
+            "type": "string"
+          },
+          "creeLe": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "modifieLe": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "sujetId",
+          "nature",
+          "definitionChampId",
+          "valeur",
+          "typeLienId",
+          "cibleId",
+          "source",
+          "fiabilite",
+          "dateConstatation",
+          "etat",
+          "visibilite",
+          "creeLe",
+          "modifieLe"
+        ]
+      },
+      "ModificationFaitDto": {
+        "type": "object",
+        "properties": {
+          "valeur": {
+            "type": "object",
+            "description": "Champ seulement — la cible d’un lien ne se corrige pas"
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          },
+          "fiabilite": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 4
+          },
+          "dateConstatation": {
+            "type": "string",
+            "format": "date"
+          },
+          "visibilite": {
+            "enum": [
+              "public",
+              "restreint",
+              "prive"
+            ],
+            "type": "string"
+          }
+        }
       },
       "SanteReponseDto": {
         "type": "object",

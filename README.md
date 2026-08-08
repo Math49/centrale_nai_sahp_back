@@ -67,6 +67,21 @@ processus.
 Les arguments sont positionnels et non nommés — npm intercepte les options
 longues qu'il ne connaît pas, même après `--`.
 
+### Données de développement
+
+```bash
+npm run semences:madrina
+```
+
+Installe le référentiel s'il est absent et rejoue le parcours de référence de
+l'annexe B de l'étude du besoin : le groupe Madrina, ses membres, ses véhicules
+et deux braquages. Onze entités, quarante faits.
+
+C'est le test de non-régression du modèle : **Isadora Morales et Tyron Banks ne
+sont reliés par aucun fait**, et le rapprochement doit tomber seul par le graphe
+(lot 9). La commande refuse de s'exécuter sur une base qui contient déjà des
+entités.
+
 ### Variante — base en conteneur, API sur l'hôte
 
 Plus confortable pour déboguer :

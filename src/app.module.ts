@@ -3,10 +3,13 @@ import { Module } from '@nestjs/common';
 import { AgentsModule } from './agents/agents.module';
 import { AuthModule } from './auth/auth.module';
 import { ConfigurationModule } from './config/configuration.module';
+import { EntitesModule } from './entites/entites.module';
+import { FaitsModule } from './faits/faits.module';
 import { JournalModule } from './journal/journal.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ReferentielModule } from './referentiel/referentiel.module';
 import { SanteModule } from './sante/sante.module';
+import { SemencesModule } from './semences/semences.module';
 
 /**
  * Modules métier à venir, dans l'ordre des lots :
@@ -25,6 +28,9 @@ import { SanteModule } from './sante/sante.module';
     AuthModule,
     AgentsModule,
     ReferentielModule,
+    EntitesModule,
+    FaitsModule,
+    SemencesModule,
     SanteModule,
   ],
 })

@@ -17,7 +17,170 @@ datasource db {
   extensions = [pg_trgm, unaccent]
 }
 
-// Les modèles du cœur — entite, fait, fichier, valeur_unique — arrivent au lot 4.
+// ─────────────────────────────── Cœur ───────────────────────────────
+//
+// AVERTISSEMENT — la cohérence de ces tables repose sur des triggers et des
+// index partiels que Prisma ne connaît pas. Voir prisma/sql/.
+
+enum Visibilite {
+  public
+  restreint
+  prive
+
+  @@map("visibilite")
+}
+
+enum EtatEntite {
+  actif
+  archive
+
+  @@map("etat_entite")
+}
+
+enum EtatFait {
+  actif
+  infirme
+  archive
+
+  @@map("etat_fait")
+}
+
+enum NatureFait {
+  champ
+  lien
+
+  @@map("nature_fait")
+}
+
+model Entite {
+  id String @id @default(uuid()) @db.Uuid
+
+  typeEntiteId String     @map("type_entite_id") @db.Uuid
+  typeEntite   TypeEntite @relation(fields: [typeEntiteId], references: [id], onDelete: Restrict)
+
+  /// Calculé depuis `type_entite.modele_libelle` par trigger. Ne jamais écrire
+  /// depuis l'application.
+  libelle String
+
+  /// Projection des faits, maintenue par trigger. Ne jamais écrire non plus :
+  /// la vérité est dans `fait`, ceci n'en est qu'une vue matérialisée.
+  valeurs Json @default("{}")
+
+  /// Champ libre, sans historique ni source — ce n'est pas un fait.
+  note String?
+
+  visibilite Visibilite @default(public)
+  etat       EtatEntite @default(actif)
+
+  /// Non nul si l'entité a été absorbée par une fusion (lot 11).
+  fusionneeVersId String?  @map("fusionnee_vers_id") @db.Uuid
+  fusionneeVers   Entite?  @relation("fusion", fields: [fusionneeVersId], references: [id], onDelete: Restrict)
+  absorbees       Entite[] @relation("fusion")
+
+  creePar   String   @map("cree_par") @db.Uuid
+  auteur    Agent    @relation("entite_auteur", fields: [creePar], references: [id], onDelete: Restrict)
+  creeLe    DateTime @default(now()) @map("cree_le") @db.Timestamptz(6)
+  modifieLe DateTime @default(now()) @map("modifie_le") @db.Timestamptz(6)
+
+  faitsOuElleEstSujet Fait[]         @relation("fait_sujet")
+  faitsOuElleEstCible Fait[]         @relation("fait_cible")
+  fichiers            Fichier[]
+  valeursUniques      ValeurUnique[]
+
+  @@map("entite")
+}
+
+/// Unité élémentaire d'information : un champ ou un lien, toujours sourcé.
+model Fait {
+  id String @id @default(uuid()) @db.Uuid
+
+  sujetId String @map("sujet_id") @db.Uuid
+  sujet   Entite @relation("fait_sujet", fields: [sujetId], references: [id], onDelete: Restrict)
+
+  nature NatureFait
+
+  definitionChampId String?          @map("definition_champ_id") @db.Uuid
+  definitionChamp   DefinitionChamp? @relation(fields: [definitionChampId], references: [id], onDelete: Restrict)
+  valeur            Json?
+
+  fichierId String?  @map("fichier_id") @db.Uuid
+  fichier   Fichier? @relation(fields: [fichierId], references: [id], onDelete: Restrict)
+
+  typeLienId String?   @map("type_lien_id") @db.Uuid
+  typeLien   TypeLien? @relation(fields: [typeLienId], references: [id], onDelete: Restrict)
+
+  cibleId String? @map("cible_id") @db.Uuid
+  cible   Entite? @relation("fait_cible", fields: [cibleId], references: [id], onDelete: Restrict)
+
+  /// Texte libre. Obligatoire — aucun fait sans source.
+  source String
+
+  /// 1 douteux · 2 à confirmer · 3 probable · 4 certain.
+  /// Entier ordonné : le maillon le plus faible d'un chemin se calcule par MIN.
+  fiabilite Int @db.SmallInt
+
+  /// Le jour où l'information a été apprise, à ne pas confondre avec la date
+  /// portée par l'entité elle-même.
+  dateConstatation DateTime @map("date_constatation") @db.Date
+
+  etat EtatFait @default(actif)
+
+  visibilite Visibilite @default(public)
+
+  /// Minimum entre la visibilité propre, celle du dossier de saisie, du sujet
+  /// et de la cible. Calculée par un trigger BEFORE au lot 5.
+  visibiliteEffective Visibilite @default(public) @map("visibilite_effective")
+
+  creePar    String   @map("cree_par") @db.Uuid
+  auteur     Agent    @relation("fait_auteur", fields: [creePar], references: [id], onDelete: Restrict)
+  creeLe     DateTime @default(now()) @map("cree_le") @db.Timestamptz(6)
+  modifiePar String?  @map("modifie_par") @db.Uuid
+  modifieLe  DateTime @default(now()) @map("modifie_le") @db.Timestamptz(6)
+
+  @@map("fait")
+}
+
+model Fichier {
+  id String @id @default(uuid()) @db.Uuid
+
+  entiteId String @map("entite_id") @db.Uuid
+  entite   Entite @relation(fields: [entiteId], references: [id], onDelete: Restrict)
+
+  nomOrigine String @map("nom_origine")
+
+  /// Identifiant opaque sur le volume. Jamais servi en statique : un
+  /// contrôleur vérifie les droits avant de renvoyer l'octet (lot 12).
+  chemin String @unique
+
+  mime   String
+  taille Int
+
+  deposePar String   @map("depose_par") @db.Uuid
+  deposeur  Agent    @relation("fichier_deposeur", fields: [deposePar], references: [id], onDelete: Restrict)
+  deposeLe  DateTime @default(now()) @map("depose_le") @db.Timestamptz(6)
+
+  faits Fait[]
+
+  @@map("fichier")
+}
+
+/// Index d'unicité des champs marqués uniques, sur valeur normalisée.
+/// Entièrement maintenu par trigger : ne jamais y écrire depuis l'application.
+model ValeurUnique {
+  typeEntiteId      String @map("type_entite_id") @db.Uuid
+  definitionChampId String @map("definition_champ_id") @db.Uuid
+
+  /// lower(unaccent(trim(...))) — sans quoi « Moralès » et « Morales »
+  /// passeraient pour deux valeurs distinctes.
+  valeurNormalisee String @map("valeur_normalisee")
+
+  entiteId String @map("entite_id") @db.Uuid
+  entite   Entite @relation(fields: [entiteId], references: [id], onDelete: Cascade)
+
+  @@id([typeEntiteId, definitionChampId, valeurNormalisee])
+  @@index([entiteId])
+  @@map("valeur_unique")
+}
 
 // ───────────────────────────── Référentiel ─────────────────────────────
 //
@@ -61,6 +224,7 @@ model TypeEntite {
 
   liensEnSource TypeLien[] @relation("type_lien_source")
   liensEnCible  TypeLien[] @relation("type_lien_cible")
+  entites       Entite[]
 
   @@map("type_entite")
 }
@@ -82,6 +246,8 @@ model DefinitionChamp {
   options Json?
 
   ordre Int @default(0)
+
+  faits Fait[]
 
   @@unique([typeEntiteId, cle])
   @@map("definition_champ")
@@ -108,6 +274,7 @@ model TypeLien {
   ordre    Int     @default(0)
 
   onglets OngletTypeLien[]
+  faits   Fait[]
 
   @@map("type_lien")
 }
@@ -188,6 +355,9 @@ model Agent {
   creeLe DateTime @default(now()) @map("cree_le") @db.Timestamptz(6)
 
   entreesJournalAudit JournalAudit[] @relation("auteur_audit")
+  entitesCreees       Entite[]       @relation("entite_auteur")
+  faitsCrees          Fait[]         @relation("fait_auteur")
+  fichiersDeposes     Fichier[]      @relation("fichier_deposeur")
 
   @@map("agent")
 }

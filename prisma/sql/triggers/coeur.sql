@@ -1,0 +1,103 @@
+-- Triggers de cohérence du cœur.
+--
+-- Frontière retenue : la base garantit que la donnée ne peut pas devenir
+-- incohérente, l'application décide qui a le droit de la voir.
+
+-- ─── Projection des faits sur l'entité, et recalcul du libellé ───
+
+CREATE OR REPLACE FUNCTION fait_projection()
+RETURNS trigger AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    PERFORM projeter_entite(OLD.sujet_id);
+    RETURN OLD;
+  END IF;
+
+  PERFORM projeter_entite(NEW.sujet_id);
+
+  -- Un fait qui change de sujet laisse deux fiches à recalculer.
+  IF TG_OP = 'UPDATE' AND OLD.sujet_id IS DISTINCT FROM NEW.sujet_id THEN
+    PERFORM projeter_entite(OLD.sujet_id);
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_fait_projection ON fait;
+CREATE TRIGGER trg_fait_projection
+AFTER INSERT OR UPDATE OR DELETE ON fait
+FOR EACH ROW EXECUTE FUNCTION fait_projection();
+
+-- ─── Unicité des champs marqués uniques ───
+
+CREATE OR REPLACE FUNCTION fait_unicite()
+RETURNS trigger AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    PERFORM recalculer_valeurs_uniques(OLD.sujet_id);
+    RETURN OLD;
+  END IF;
+
+  PERFORM recalculer_valeurs_uniques(NEW.sujet_id);
+
+  IF TG_OP = 'UPDATE' AND OLD.sujet_id IS DISTINCT FROM NEW.sujet_id THEN
+    PERFORM recalculer_valeurs_uniques(OLD.sujet_id);
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_fait_unicite ON fait;
+CREATE TRIGGER trg_fait_unicite
+AFTER INSERT OR UPDATE OR DELETE ON fait
+FOR EACH ROW EXECUTE FUNCTION fait_unicite();
+
+-- ─── Reprojection après changement de gabarit ───
+--
+-- Sans cela, modifier « {plaque} » en « {plaque} {modele} » depuis
+-- l'administration laisserait tous les libellés déjà calculés dans leur ancien
+-- état, sans qu'aucun écran ne le signale.
+
+CREATE OR REPLACE FUNCTION type_entite_reprojection()
+RETURNS trigger AS $$
+DECLARE
+  v_id uuid;
+BEGIN
+  IF OLD.modele_libelle IS NOT DISTINCT FROM NEW.modele_libelle THEN
+    RETURN NEW;
+  END IF;
+
+  FOR v_id IN SELECT id FROM entite WHERE type_entite_id = NEW.id LOOP
+    PERFORM projeter_entite(v_id);
+  END LOOP;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_type_entite_reprojection ON type_entite;
+CREATE TRIGGER trg_type_entite_reprojection
+AFTER UPDATE OF modele_libelle ON type_entite
+FOR EACH ROW EXECUTE FUNCTION type_entite_reprojection();
+
+-- ─── Horodatage ───
+
+CREATE OR REPLACE FUNCTION horodater()
+RETURNS trigger AS $$
+BEGIN
+  NEW.modifie_le := now();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_entite_horodatage ON entite;
+CREATE TRIGGER trg_entite_horodatage
+BEFORE UPDATE ON entite
+FOR EACH ROW EXECUTE FUNCTION horodater();
+
+DROP TRIGGER IF EXISTS trg_fait_horodatage ON fait;
+CREATE TRIGGER trg_fait_horodatage
+BEFORE UPDATE ON fait
+FOR EACH ROW EXECUTE FUNCTION horodater();

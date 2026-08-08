@@ -13,6 +13,10 @@ import { PrismaService } from '../src/prisma/prisma.service';
 
 const TABLES = [
   'journal_audit',
+  'valeur_unique',
+  'fait',
+  'fichier',
+  'entite',
   'onglet_type_lien',
   'onglet',
   'type_lien',

@@ -22,6 +22,7 @@
     "prisma:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "agent:super-admin": "ts-node -r tsconfig-paths/register src/commandes/creer-super-admin.ts",
+    "semences:madrina": "ts-node -r tsconfig-paths/register src/commandes/peupler-madrina.ts",
     "sql:migration": "node scripts/creer-migration-sql.mjs",
     "openapi": "node scripts/generer-openapi.mjs"
   },

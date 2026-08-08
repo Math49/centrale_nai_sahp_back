@@ -66,6 +66,28 @@ Trois règles y sont tenues côté API :
 Les suppressions de référentiel sont refusées dès qu'une donnée en dépend : les
 clés étrangères sont en `RESTRICT`, et la violation est traduite en 409.
 
+## Le cœur — ce que les triggers garantissent
+
+`entite.valeurs` et `entite.libelle` sont une **projection** des faits,
+maintenue par `projeter_entite()`. **Ne jamais les écrire depuis
+l'application** : la vérité est dans `fait`, ceci n'en est qu'une vue
+matérialisée. Un champ multiple projette un tableau, un champ simple la valeur
+du fait le plus fiable puis le plus récent.
+
+`valeur_unique` est recalculée par entité, jamais par fait : deux faits peuvent
+affirmer la même plaque depuis deux sources, ce qui ne doit pas produire un
+conflit avec soi-même. La clé primaire refuse le vrai doublon — deux entités du
+même type revendiquant la même valeur normalisée.
+
+**Prisma ne relaie pas les messages levés par un trigger** : un refus d'unicité
+arrive en `P2002` sans cible. `UniciteService` relit `valeur_unique` pour nommer
+la valeur en cause. La garantie reste celle de la base ; l'application se
+contente de dire pourquoi.
+
+**Une propriété de DTO sans décorateur class-validator est retirée** par le pipe
+global (`whitelist: true`). Les valeurs de faits, dont la forme ne se connaît
+qu'à l'exécution, portent `@Allow()`.
+
 ## Modèle, en trois phrases
 
 - Le **fait** est l'unité élémentaire : un champ ou un lien, toujours porteur
@@ -184,6 +206,7 @@ lui permettant d'en retirer un aurait été incohérent.
 docker compose -f docker-compose.dev.yml up      # base + API
 npm run start:dev                                # API seule, base en conteneur
 npm run agent:super-admin -- <matricule> <prénom> <nom>
+npm run semences:madrina                         # parcours de référence
 npm test                                         # tests unitaires
 npm run test:e2e                                 # intégration, base de test dédiée
 npm run lint
@@ -202,7 +225,7 @@ applique les migrations avant de lancer jest.
 | 0 — Socle technique | fait |
 | 1 — Authentification et agents | fait |
 | 3 — Référentiel | fait |
-| 4 — Entités et faits | à faire |
+| 4 — Entités et faits | fait |
 | 5 — Visibilité et permissions | à faire |
 | 7 — Fiche entité (back) | à faire |
 | 8 — Dossiers | à faire |
