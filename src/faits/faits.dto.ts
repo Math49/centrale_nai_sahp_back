@@ -32,9 +32,12 @@ export class CreationFaitDto {
 
   // Voir ChampSaisiDto : la forme dépend du champ visé, validée à l'exécution.
   @Allow()
-  @ApiPropertyOptional({ description: 'Si nature = champ' })
+  @ApiPropertyOptional({
+    oneOf: [{ type: 'string' }, { type: 'number' }, { type: 'boolean' }],
+    description: 'Si nature = champ',
+  })
   @IsOptional()
-  valeur?: unknown;
+  valeur?: string | number | boolean;
 
   @ApiPropertyOptional({ format: 'uuid', description: 'Si nature = lien' })
   @IsOptional()
@@ -79,10 +82,11 @@ export class CreationFaitDto {
 export class ModificationFaitDto {
   @Allow()
   @ApiPropertyOptional({
+    oneOf: [{ type: 'string' }, { type: 'number' }, { type: 'boolean' }],
     description: 'Champ seulement — la cible d’un lien ne se corrige pas',
   })
   @IsOptional()
-  valeur?: unknown;
+  valeur?: string | number | boolean;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -117,7 +121,16 @@ export class FaitDto {
   @ApiProperty({ nullable: true, format: 'uuid' })
   definitionChampId!: string | null;
 
-  @ApiProperty({ nullable: true }) valeur!: unknown;
+  @ApiProperty({
+    nullable: true,
+    oneOf: [
+      { type: 'string' },
+      { type: 'number' },
+      { type: 'boolean' },
+      { type: 'array', items: {} },
+    ],
+  })
+  valeur!: unknown;
 
   @ApiProperty({ nullable: true, format: 'uuid' })
   typeLienId!: string | null;

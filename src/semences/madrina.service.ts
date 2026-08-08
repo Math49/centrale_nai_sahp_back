@@ -152,7 +152,7 @@ export class MadrinaService {
     // depuis le compte, comme le ferait le garde d'authentification.
     const auteur = await this.resoudreAuteur(auteurId);
 
-    const champ = (cle: string, valeur: unknown) => ({
+    const champ = (cle: string, valeur: string | number | boolean) => ({
       definitionChampId: champs[cle],
       valeur,
     });

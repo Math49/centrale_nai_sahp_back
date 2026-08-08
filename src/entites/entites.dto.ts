@@ -1,4 +1,8 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  ApiProperty,
+  ApiPropertyOptional,
+  type ApiPropertyOptions,
+} from '@nestjs/swagger';
 import { EtatEntite, TypeDonnee, Visibilite } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
@@ -64,10 +68,11 @@ export class ChampSaisiDto extends ProvenanceDto {
   // le pipe global de retirer la propriété au titre du whitelist.
   @Allow()
   @ApiProperty({
+    oneOf: [{ type: 'string' }, { type: 'number' }, { type: 'boolean' }],
     description:
       'Texte, nombre, booléen ou valeur de liste, selon le type du champ',
   })
-  valeur!: unknown;
+  valeur!: string | number | boolean;
 }
 
 export class LienSaisiDto extends ProvenanceDto {
@@ -135,9 +140,21 @@ export class ModificationEntiteDto {
 
 // ───────────────────────────── Lecture ─────────────────────────────
 
+/** Valeur d'un champ telle qu'elle sort de l'API : scalaire, ou tableau si le
+ *  champ est multiple. */
+const VALEUR_LUE: ApiPropertyOptions = {
+  nullable: true,
+  oneOf: [
+    { type: 'string' },
+    { type: 'number' },
+    { type: 'boolean' },
+    { type: 'array', items: {} },
+  ],
+};
+
 export class FaitDeChampDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
-  @ApiProperty() valeur!: unknown;
+  @ApiProperty(VALEUR_LUE) valeur!: unknown;
   @ApiProperty() source!: string;
   @ApiProperty({ minimum: FIABILITE_MIN, maximum: FIABILITE_MAX })
   fiabilite!: number;
@@ -160,6 +177,7 @@ export class ChampDeFicheDto {
   @ApiProperty() multiple!: boolean;
 
   @ApiProperty({
+    ...VALEUR_LUE,
     description: 'Valeur projetée, celle qui s’affiche en évidence',
   })
   valeur!: unknown;

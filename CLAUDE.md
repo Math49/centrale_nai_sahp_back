@@ -35,7 +35,11 @@ Elle départage tous les arbitrages d'implémentation.
 5. **La visibilité effective est toujours la plus restrictive applicable.**
 6. **Rien n'est jamais supprimé** : tout est archivé, infirmé ou anonymisé, et
    reste consultable. Pas de `DELETE` métier — les clés étrangères sont en
-   `ON DELETE RESTRICT`.
+   `ON DELETE RESTRICT`. Seule exception, bornée : `POST
+   /entites/:id/annuler-creation` retire une saisie en cascade abandonnée. Elle
+   ne porte pas sur de l'information établie mais sur une frappe qui n'est
+   jamais allée au bout, et quatre verrous la retiennent — auteur, heure,
+   aucune référence entrante, aucun dossier.
 7. **Toute consultation de fiche est journalisée**, y compris celles du
    super-admin, qui sont en outre marquées comme telles.
 8. **Toute création, modification ou archivage passe par une confirmation

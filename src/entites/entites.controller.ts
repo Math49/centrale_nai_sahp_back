@@ -134,6 +134,26 @@ export class EntitesController {
     return this.entites.modifier(agent, id, corps);
   }
 
+  @Post(':id/annuler-creation')
+  @Permissions(PERMISSIONS.ENTITE_CREER)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Annulation d’une saisie en cascade',
+    description:
+      'Retire une entité que le sous-formulaire venait de persister et que l’agent abandonne. Réservée à son auteur, dans l’heure, sur une entité que rien d’autre ne désigne — au-delà, seul l’archivage sort.',
+  })
+  @ApiResponse({ status: 204 })
+  @ApiResponse({
+    status: 409,
+    description: 'Trop ancienne, déjà référencée, ou saisie par un autre agent',
+  })
+  annulerCreation(
+    @Agent() agent: AgentCourant,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<void> {
+    return this.entites.annulerCreation(agent, id);
+  }
+
   @Post(':id/archiver')
   @Permissions(PERMISSIONS.ENTITE_ARCHIVER)
   @HttpCode(HttpStatus.OK)

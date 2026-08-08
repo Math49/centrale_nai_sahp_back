@@ -52,6 +52,9 @@ interface FiltresAnnuaire {
 
 type TypeAvecChamps = TypeEntite & { champs: DefinitionChamp[] };
 
+/** Au-delà, une saisie n'est plus « en cours » : elle s'archive. */
+const DELAI_ANNULATION = 60 * 60 * 1000;
+
 /** Ordre de préséance des faits d'un même champ dans la projection. */
 const PRESEANCE: Prisma.FaitOrderByWithRelationInput[] = [
   { fiabilite: 'desc' },
@@ -435,6 +438,76 @@ export class EntitesService {
     });
 
     return this.lire(agent, id);
+  }
+
+  /**
+   * Annulation d'une saisie en cascade.
+   *
+   * Ce n'est pas une suppression de renseignement, mais le retrait d'une saisie
+   * qui n'est jamais allée au bout : le sous-formulaire a persisté une entité,
+   * puis l'agent a fait marche arrière. L'invariant « rien n'est jamais
+   * supprimé » porte sur l'information établie, pas sur une frappe abandonnée.
+   *
+   * Quatre verrous, faute de quoi ce serait une porte de suppression déguisée :
+   * seul l'auteur, dans l'heure, sur une entité que rien d'autre ne désigne, et
+   * qui ne sert de pivot à aucun dossier. Passé ces bornes, l'archivage est la
+   * seule sortie.
+   */
+  async annulerCreation(agent: AgentCourant, id: string): Promise<void> {
+    await this.visibilite.entiteVisibleOuIntrouvable(agent, id);
+
+    const entite = await this.prisma.sansFiltre.entite.findUniqueOrThrow({
+      where: { id },
+    });
+
+    if (entite.creePar !== agent.id) {
+      throw new ConflictException(
+        'seule la saisie qu’on vient de faire soi-même s’annule — sinon, archiver',
+      );
+    }
+
+    if (Date.now() - entite.creeLe.getTime() > DELAI_ANNULATION) {
+      throw new ConflictException(
+        'saisie trop ancienne pour être annulée — l’archiver',
+      );
+    }
+
+    const [referencesEntrantes, fichiers, dossiers] = await Promise.all([
+      this.prisma.sansFiltre.fait.count({
+        where: { cibleId: id, sujetId: { not: id } },
+      }),
+      this.prisma.sansFiltre.fichier.count({ where: { entiteId: id } }),
+      this.prisma.sansFiltre.dossier.count({ where: { entitePivotId: id } }),
+    ]);
+
+    if (referencesEntrantes > 0) {
+      throw new ConflictException(
+        'déjà désignée par un autre fait — l’archiver plutôt que l’annuler',
+      );
+    }
+
+    if (fichiers > 0 || dossiers > 0) {
+      throw new ConflictException(
+        'des fichiers ou un dossier s’y rattachent — l’archiver',
+      );
+    }
+
+    await this.prisma.$transaction(async (transaction) => {
+      // Les clés étrangères des faits sont en RESTRICT : ils partent d'abord.
+      await transaction.fait.deleteMany({ where: { sujetId: id } });
+      await transaction.entite.delete({ where: { id } });
+
+      await this.audit.tracer(
+        {
+          agentId: agent.id,
+          action: 'entite.annuler_creation',
+          cibleTable: 'entite',
+          cibleId: id,
+          avant: { libelle: entite.libelle, typeEntiteId: entite.typeEntiteId },
+        },
+        transaction,
+      );
+    });
   }
 
   // ─────────────────────────── Interne ───────────────────────────

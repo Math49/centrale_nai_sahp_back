@@ -507,6 +507,75 @@ describe('Lot 4 — entités et faits (e2e)', () => {
     });
   });
 
+  describe('annulation d’une saisie en cascade', () => {
+    it('retire l’entité que le sous-formulaire venait de persister', async () => {
+      const id = (
+        (
+          await creerEntite(junior, {
+            typeEntiteId: referentiel.types.lieu,
+            ...PROVENANCE,
+            champs: [champ('lieu.nom', 'Saisie abandonnée')],
+          }).expect(201)
+        ).body as FicheEntiteDto
+      ).id;
+
+      await request(serveur)
+        .post(`/entites/${id}/annuler-creation`)
+        .set(enTantQue(junior))
+        .expect(204);
+
+      await request(serveur)
+        .get(`/entites/${id}`)
+        .set(enTantQue(junior))
+        .expect(404);
+    });
+
+    it('refuse d’annuler la saisie d’un autre agent', async () => {
+      const id = (
+        (
+          await creerEntite(junior, {
+            typeEntiteId: referentiel.types.lieu,
+            ...PROVENANCE,
+            champs: [champ('lieu.nom', 'Saisie d’un autre')],
+          }).expect(201)
+        ).body as FicheEntiteDto
+      ).id;
+
+      await request(serveur)
+        .post(`/entites/${id}/annuler-creation`)
+        .set(enTantQue(superAdmin))
+        .expect(409);
+    });
+
+    it('refuse d’annuler une entité qu’un autre fait désigne déjà', async () => {
+      const groupe = (
+        (
+          await creerEntite(junior, {
+            typeEntiteId: referentiel.types.groupe,
+            ...PROVENANCE,
+            champs: [champ('groupe.nom', 'Déjà référencé')],
+          }).expect(201)
+        ).body as FicheEntiteDto
+      ).id;
+
+      await creerEntite(junior, {
+        typeEntiteId: referentiel.types.personne,
+        ...PROVENANCE,
+        champs: [
+          champ('personne.prenom', 'Lien'),
+          champ('personne.nom', 'Entrant'),
+        ],
+        liens: [{ typeLienId: referentiel.liens.membre_de, cibleId: groupe }],
+      }).expect(201);
+
+      // Annuler ici laisserait un lien pendant : l'archivage est la sortie.
+      await request(serveur)
+        .post(`/entites/${groupe}/annuler-creation`)
+        .set(enTantQue(junior))
+        .expect(409);
+    });
+  });
+
   describe('détection de doublons', () => {
     it('propose une entité proche par similarité de libellé', async () => {
       const reponse = await request(serveur)

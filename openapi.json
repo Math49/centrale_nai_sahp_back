@@ -1345,6 +1345,39 @@
         ]
       }
     },
+    "/entites/{id}/annuler-creation": {
+      "post": {
+        "description": "Retire une entité que le sous-formulaire venait de persister et que l’agent abandonne. Réservée à son auteur, dans l’heure, sur une entité que rien d’autre ne désigne — au-delà, seul l’archivage sort.",
+        "operationId": "EntitesController_annulerCreation",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "409": {
+            "description": "Trop ancienne, déjà référencée, ou saisie par un autre agent"
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Annulation d’une saisie en cascade",
+        "tags": [
+          "entites"
+        ]
+      }
+    },
     "/entites/{id}/archiver": {
       "post": {
         "description": "Rien n’est jamais supprimé : l’entité sort des écrans courants et reste consultable, ses faits intacts.",
@@ -2536,7 +2569,22 @@
             "format": "uuid"
           },
           "valeur": {
-            "type": "object"
+            "nullable": true,
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "array",
+                "items": {}
+              }
+            ]
           },
           "source": {
             "type": "string"
@@ -2607,7 +2655,22 @@
             "type": "boolean"
           },
           "valeur": {
-            "type": "object",
+            "nullable": true,
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "array",
+                "items": {}
+              }
+            ],
             "description": "Valeur projetée, celle qui s’affiche en évidence"
           },
           "faits": {
@@ -2844,7 +2907,17 @@
             "format": "uuid"
           },
           "valeur": {
-            "type": "object",
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              }
+            ],
             "description": "Texte, nombre, booléen ou valeur de liste, selon le type du champ"
           }
         },
@@ -2990,7 +3063,17 @@
             "description": "Si nature = champ"
           },
           "valeur": {
-            "type": "object",
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              }
+            ],
             "description": "Si nature = champ"
           },
           "typeLienId": {
@@ -3065,8 +3148,22 @@
             "format": "uuid"
           },
           "valeur": {
-            "type": "object",
-            "nullable": true
+            "nullable": true,
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "array",
+                "items": {}
+              }
+            ]
           },
           "typeLienId": {
             "type": "string",
@@ -3150,7 +3247,17 @@
         "type": "object",
         "properties": {
           "valeur": {
-            "type": "object",
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              }
+            ],
             "description": "Champ seulement — la cible d’un lien ne se corrige pas"
           },
           "source": {
