@@ -17,6 +17,7 @@ import {
 } from '@prisma/client';
 
 import type { AgentCourant } from '../auth/agent-courant';
+import { DossiersService } from '../dossiers/dossiers.service';
 import { JournalAuditService } from '../journal/journal-audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { VisibiliteService } from '../visibilite/visibilite.service';
@@ -70,6 +71,7 @@ export class EntitesService {
     private readonly validation: ValidationDynamiqueService,
     private readonly unicite: UniciteService,
     private readonly visibilite: VisibiliteService,
+    private readonly dossiers: DossiersService,
     private readonly audit: JournalAuditService,
   ) {}
 
@@ -149,6 +151,18 @@ export class EntitesService {
             });
           }
 
+          // Une entité saisie depuis un dossier entre dans son suivi : c'est
+          // le geste que l'agent croit faire en la créant depuis là.
+          if (donnees.dossierId) {
+            await transaction.suivi.create({
+              data: {
+                dossierId: donnees.dossierId,
+                entiteId: entite.id,
+                ajoutePar: agent.id,
+              },
+            });
+          }
+
           // Une entité sans aucun fait n'a jamais déclenché le trigger.
           await transaction.$executeRaw`SELECT projeter_entite(${entite.id}::uuid)`;
 
@@ -212,6 +226,7 @@ export class EntitesService {
     });
 
     const client = this.visibilite.clientPour(agent);
+    const dossiers = await this.dossiers.rattachements(agent, id);
 
     // Les `include` de sujet et de cible ne sont pas filtrés — ils n'ont pas à
     // l'être : un fait dont la cible est privée est lui-même au moins privé par
@@ -305,6 +320,7 @@ export class EntitesService {
       ),
       contenuLisible: this.visibilite.contenuDEntiteLisible(agent, entite),
       note: entite.note,
+      dossiers,
       champs,
       onglets,
       liensHorsOnglet: liens.filter((lien) => !regroupes.has(lien.faitId)),

@@ -4,6 +4,8 @@ import {
   type ApiPropertyOptions,
 } from '@nestjs/swagger';
 import { EtatEntite, TypeDonnee, Visibilite } from '@prisma/client';
+
+import { RattachementDto } from '../dossiers/dossiers.dto';
 import { Type } from 'class-transformer';
 import {
   Allow,
@@ -289,6 +291,14 @@ export class FicheEntiteDto extends EntiteResumeeDto {
   contenuLisible!: boolean;
 
   @ApiProperty({ nullable: true }) note!: string | null;
+
+  @ApiProperty({
+    type: [RattachementDto],
+    description:
+      'Dossiers qui suivent cette entité, filtrés. Une entité peut appartenir à plusieurs dossiers, et la fiche l’indique.',
+  })
+  dossiers!: RattachementDto[];
+
   @ApiProperty({ type: [ChampDeFicheDto] }) champs!: ChampDeFicheDto[];
 
   @ApiProperty({

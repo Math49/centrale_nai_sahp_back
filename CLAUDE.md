@@ -260,7 +260,7 @@ applique les migrations avant de lancer jest.
 | 4 — Entités et faits | fait |
 | 5 — Visibilité et permissions | fait |
 | 7 — Fiche entité (back) | fait |
-| 8 — Dossiers | à faire |
+| 8 — Dossiers | fait |
 | 9 — Graphe | à faire |
 | 10 — Signaux | à faire |
 | 11 — Traçabilité | à faire |

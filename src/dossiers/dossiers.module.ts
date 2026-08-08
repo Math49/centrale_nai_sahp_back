@@ -1,12 +1,10 @@
 import { Module } from '@nestjs/common';
 
+import { DossiersController } from './dossiers.controller';
 import { DossiersService } from './dossiers.service';
 
-/**
- * Aucun contrôleur au lot 5 : seul le noyau existe, pour que le moteur de
- * visibilité ait un dossier à interroger. Les routes viennent au lot 8.
- */
 @Module({
+  controllers: [DossiersController],
   providers: [DossiersService],
   exports: [DossiersService],
 })

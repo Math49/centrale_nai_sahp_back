@@ -59,6 +59,47 @@ export class VisibiliteService {
     return entite;
   }
 
+  /** Même règle pour un dossier : 404 plutôt que 403 sur ce qui est privé. */
+  async dossierVisibleOuIntrouvable(
+    agent: AgentCourant,
+    id: string,
+  ): Promise<{ id: string; visibilite: Visibilite }> {
+    const contexte = this.contexte(agent);
+
+    const dossier = await this.prisma.sansFiltre.dossier.findUnique({
+      where: { id },
+      select: { id: true, visibilite: true },
+    });
+
+    const habilite = contexte.dossiersHabilites.includes(id);
+
+    if (!dossier || !objetVisible(contexte, dossier.visibilite, habilite)) {
+      throw new NotFoundException('dossier inconnu');
+    }
+
+    return dossier;
+  }
+
+  /**
+   * Le contenu d'un dossier est-il lisible ?
+   *
+   * Un dossier restreint est un objet visible au contenu fermé : son nom
+   * s'affiche, sa note, son suivi et sa whitelist non.
+   */
+  contenuDeDossierLisible(
+    agent: AgentCourant,
+    dossier: { id: string; visibilite: Visibilite },
+  ): boolean {
+    const contexte = this.contexte(agent);
+
+    return contenuAccessible(contexte, [
+      {
+        niveau: dossier.visibilite,
+        habilite: contexte.dossiersHabilites.includes(dossier.id),
+      },
+    ]);
+  }
+
   /**
    * Le contenu d'une entité est-il lisible ?
    *

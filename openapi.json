@@ -1490,6 +1490,314 @@
         ]
       }
     },
+    "/dossiers": {
+      "get": {
+        "description": "Les dossiers privés en sont absents, sans mention. Le décompte des entités suivies ne compte que le visible.",
+        "operationId": "DossiersController_lister",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DossierResumeDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Liste des dossiers",
+        "tags": [
+          "dossiers"
+        ]
+      },
+      "post": {
+        "description": "Nom, entité pivot, visibilité et note. Le pivot est suivi dès la création.",
+        "operationId": "DossiersController_creer",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreationDossierDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PanneauDossierDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Un dossier porte déjà ce nom"
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Création d’un dossier",
+        "tags": [
+          "dossiers"
+        ]
+      }
+    },
+    "/dossiers/{id}": {
+      "get": {
+        "description": "Ouvrir un dossier revient à ouvrir la fiche de son entité pivot ; ce panneau est ce que la fiche affiche en plus lorsqu’on y arrive par le dossier.",
+        "operationId": "DossiersController_panneau",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PanneauDossierDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Inconnu, ou privé sans habilitation"
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Panneau de dossier",
+        "tags": [
+          "dossiers"
+        ]
+      },
+      "patch": {
+        "operationId": "DossiersController_modifier",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificationDossierDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PanneauDossierDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "tags": [
+          "dossiers"
+        ]
+      }
+    },
+    "/dossiers/{id}/suivi": {
+      "post": {
+        "description": "Aucune duplication : l’entité reste unique, une même fiche peut être suivie par plusieurs dossiers.",
+        "operationId": "DossiersController_suivre",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DesignationEntiteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Ajout d’une entité au suivi",
+        "tags": [
+          "dossiers"
+        ]
+      }
+    },
+    "/dossiers/{id}/suivi/{entiteId}": {
+      "delete": {
+        "operationId": "DossiersController_nePlusSuivre",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "entiteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "409": {
+            "description": "L’entité pivot ne se retire pas du suivi"
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "tags": [
+          "dossiers"
+        ]
+      }
+    },
+    "/dossiers/{id}/habilitations": {
+      "post": {
+        "description": "L’habilitation est nominative, jamais déduite d’un grade. Elle s’ajoute aux gardiens qu’un agent doit franchir.",
+        "operationId": "DossiersController_habiliter",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DesignationAgentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Whitelist du dossier",
+        "tags": [
+          "dossiers"
+        ]
+      }
+    },
+    "/dossiers/{id}/habilitations/{agentId}": {
+      "delete": {
+        "operationId": "DossiersController_retirerHabilitation",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "agentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "tags": [
+          "dossiers"
+        ]
+      }
+    },
     "/faits": {
       "post": {
         "description": "Un lien créé ici est lisible depuis ses deux extrémités : une seule arête est stockée.",
@@ -2601,6 +2909,35 @@
           "valeurUniqueIdentique"
         ]
       },
+      "RattachementDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nom": {
+            "type": "string"
+          },
+          "visibilite": {
+            "enum": [
+              "public",
+              "restreint",
+              "prive"
+            ],
+            "type": "string"
+          },
+          "estPivot": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "nom",
+          "visibilite",
+          "estPivot"
+        ]
+      },
       "FaitDeChampDto": {
         "type": "object",
         "properties": {
@@ -2908,6 +3245,13 @@
             "type": "string",
             "nullable": true
           },
+          "dossiers": {
+            "description": "Dossiers qui suivent cette entité, filtrés. Une entité peut appartenir à plusieurs dossiers, et la fiche l’indique.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RattachementDto"
+            }
+          },
           "champs": {
             "type": "array",
             "items": {
@@ -2957,6 +3301,7 @@
           "valeurs",
           "contenuLisible",
           "note",
+          "dossiers",
           "champs",
           "onglets",
           "liensHorsOnglet",
@@ -3177,6 +3522,270 @@
             "description": "Exige la permission visibilite.definir"
           }
         }
+      },
+      "DossierResumeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nom": {
+            "type": "string"
+          },
+          "visibilite": {
+            "enum": [
+              "public",
+              "restreint",
+              "prive"
+            ],
+            "type": "string"
+          },
+          "etat": {
+            "enum": [
+              "actif",
+              "archive"
+            ],
+            "type": "string"
+          },
+          "entitePivotId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "entitePivotLibelle": {
+            "type": "string"
+          },
+          "nombreSuivis": {
+            "type": "number",
+            "description": "Entités suivies **visibles par cet agent**"
+          },
+          "creeLe": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "nom",
+          "visibilite",
+          "etat",
+          "entitePivotId",
+          "entitePivotLibelle",
+          "nombreSuivis",
+          "creeLe"
+        ]
+      },
+      "EntiteSuivieDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "libelle": {
+            "type": "string"
+          },
+          "typeCode": {
+            "type": "string"
+          },
+          "estPivot": {
+            "type": "boolean"
+          },
+          "ajouteLe": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "libelle",
+          "typeCode",
+          "estPivot",
+          "ajouteLe"
+        ]
+      },
+      "AgentHabiliteDto": {
+        "type": "object",
+        "properties": {
+          "agentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "libelle": {
+            "type": "string",
+            "description": "« agent supprimé » si le compte est anonymisé"
+          },
+          "matricule": {
+            "type": "string"
+          },
+          "accordeLe": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "agentId",
+          "libelle",
+          "matricule",
+          "accordeLe"
+        ]
+      },
+      "PanneauDossierDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nom": {
+            "type": "string"
+          },
+          "visibilite": {
+            "enum": [
+              "public",
+              "restreint",
+              "prive"
+            ],
+            "type": "string"
+          },
+          "etat": {
+            "enum": [
+              "actif",
+              "archive"
+            ],
+            "type": "string"
+          },
+          "entitePivotId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "entitePivotLibelle": {
+            "type": "string"
+          },
+          "nombreSuivis": {
+            "type": "number",
+            "description": "Entités suivies **visibles par cet agent**"
+          },
+          "creeLe": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "contenuLisible": {
+            "type": "boolean",
+            "description": "Faux sur un dossier restreint sans habilitation : le nom s’affiche, le reste non"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "suivis": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EntiteSuivieDto"
+            }
+          },
+          "habilitations": {
+            "description": "Whitelist. Vide tant que le contenu n’est pas lisible.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentHabiliteDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "nom",
+          "visibilite",
+          "etat",
+          "entitePivotId",
+          "entitePivotLibelle",
+          "nombreSuivis",
+          "creeLe",
+          "contenuLisible",
+          "note",
+          "suivis",
+          "habilitations"
+        ]
+      },
+      "CreationDossierDto": {
+        "type": "object",
+        "properties": {
+          "nom": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "example": "Madrina"
+          },
+          "entitePivotId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Obligatoire : un dossier sans entité pivot n’existe pas. Ouvrir le dossier revient à ouvrir sa fiche."
+          },
+          "visibilite": {
+            "enum": [
+              "public",
+              "restreint",
+              "prive"
+            ],
+            "type": "string"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 10000,
+            "description": "Champ libre, sans source ni fiabilité — ce n’est pas un fait"
+          }
+        },
+        "required": [
+          "nom",
+          "entitePivotId"
+        ]
+      },
+      "ModificationDossierDto": {
+        "type": "object",
+        "properties": {
+          "nom": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 10000
+          },
+          "visibilite": {
+            "enum": [
+              "public",
+              "restreint",
+              "prive"
+            ],
+            "type": "string",
+            "description": "Exige la permission visibilite.definir"
+          }
+        }
+      },
+      "DesignationEntiteDto": {
+        "type": "object",
+        "properties": {
+          "entiteId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "entiteId"
+        ]
+      },
+      "DesignationAgentDto": {
+        "type": "object",
+        "properties": {
+          "agentId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "agentId"
+        ]
       },
       "CreationFaitDto": {
         "type": "object",
