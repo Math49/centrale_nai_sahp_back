@@ -92,6 +92,58 @@ contente de dire pourquoi.
 global (`whitelist: true`). Les valeurs de faits, dont la forme ne se connaît
 qu'à l'exécution, portent `@Allow()`.
 
+## Graphe
+
+Le cache vit en mémoire, chargé au démarrage et **invalidé par événement** :
+tout service qui écrit sur `entite`, `fait`, `dossier` ou `suivi` appelle
+`bus.signaler()`. Un nouveau chemin d'écriture qui l'oublierait laisserait le
+graphe périmé sans que rien ne le signale — c'est le point de vigilance du
+module.
+
+**Il contient tout, et n'est jamais servi brut.** L'élagage se fait **avant
+traversée, jamais après** : filtrer le résultat d'un parcours mené sur le
+graphe complet reviendrait à dire « un chemin existe, mais vous n'y avez pas
+droit », ce qui serait déjà l'avoir dit.
+
+La décision reste celle de `contenuAccessible` : la règle des gardiens ne
+s'écrit qu'à un endroit. Seule la façon de rassembler les gardiens change —
+en mémoire plutôt qu'en base.
+
+Le **plus solide** maximise le minimum de fiabilité. Les quatre niveaux étant
+peu nombreux, on cherche par seuil décroissant plutôt qu'avec un Dijkstra :
+le premier seuil qui relie encore donne le meilleur maillon faible possible.
+
+## Migrations — ce qui marche ici
+
+`prisma migrate dev` **se bloque sur cette machine** : il prend un verrou
+d'avis PostgreSQL et ne le rend pas toujours. Symptôme : `P1002 — Timed out
+trying to acquire a postgres advisory lock`. On s'en sort en terminant la
+session fautive :
+
+```sql
+SELECT l.pid, a.state, a.backend_start FROM pg_locks l
+  JOIN pg_stat_activity a ON a.pid = l.pid WHERE l.locktype = 'advisory';
+SELECT pg_terminate_backend(<pid>);
+```
+
+La voie fiable pour une migration déclarative :
+
+```bash
+npx prisma migrate diff --from-schema-datasource prisma/schema.prisma \
+  --to-schema-datamodel prisma/schema.prisma --script
+```
+
+puis recopier le résultat dans `prisma/migrations/<horodatage>_<nom>/migration.sql`
+et appliquer avec `npx prisma migrate deploy`.
+
+**Retirer les `DROP INDEX` du diff.** L'outil propose de supprimer les index
+qu'il ne connaît pas — ceux de `prisma/sql/`. Les laisser passer déferait le
+travail des lots précédents.
+
+**L'ordre des migrations est celui des horodatages.** Une migration SQL générée
+par `npm run sql:migration` porte l'heure courante : si elle dépend d'une table
+créée par une migration écrite à la main, vérifier que celle-ci la précède.
+
 ## Modèle, en trois phrases
 
 - Le **fait** est l'unité élémentaire : un champ ou un lien, toujours porteur
@@ -261,7 +313,7 @@ applique les migrations avant de lancer jest.
 | 5 — Visibilité et permissions | fait |
 | 7 — Fiche entité (back) | fait |
 | 8 — Dossiers | fait |
-| 9 — Graphe | à faire |
+| 9 — Graphe | fait |
 | 10 — Signaux | à faire |
 | 11 — Traçabilité | à faire |
 | 12 — Exploitation | à faire |

@@ -6,6 +6,8 @@ import { ConfigurationModule } from './config/configuration.module';
 import { DossiersModule } from './dossiers/dossiers.module';
 import { EntitesModule } from './entites/entites.module';
 import { FaitsModule } from './faits/faits.module';
+import { BusInvalidationModule } from './graphe/bus-invalidation';
+import { GrapheModule } from './graphe/graphe.module';
 import { JournalModule } from './journal/journal.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ReferentielModule } from './referentiel/referentiel.module';
@@ -26,6 +28,7 @@ import { VisibiliteModule } from './visibilite/visibilite.module';
     ConfigurationModule,
     PrismaModule,
     JournalModule,
+    BusInvalidationModule,
     VisibiliteModule,
     AuthModule,
     AgentsModule,
@@ -33,6 +36,7 @@ import { VisibiliteModule } from './visibilite/visibilite.module';
     EntitesModule,
     FaitsModule,
     DossiersModule,
+    GrapheModule,
     SemencesModule,
     SanteModule,
   ],

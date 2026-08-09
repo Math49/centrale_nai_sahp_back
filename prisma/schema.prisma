@@ -89,6 +89,7 @@ model Entite {
   dossiersPivot       Dossier[]            @relation("dossier_pivot")
   suivis              Suivi[]
   habilitations       HabilitationEntite[]
+  positions           PositionGraphe[]
 
   @@map("entite")
 }
@@ -201,6 +202,7 @@ model Dossier {
   suivis         Suivi[]
   habilitations  HabilitationDossier[]
   faitsSaisisIci Fait[]
+  positions      PositionGraphe[]
 
   @@map("dossier")
 }
@@ -257,6 +259,33 @@ model HabilitationEntite {
   @@id([entiteId, agentId])
   @@index([agentId])
   @@map("habilitation_entite")
+}
+
+/// Disposition mémorisée du graphe.
+///
+/// Par dossier lorsqu'un agent repositionne depuis un dossier, globalement
+/// sinon. Le repositionnement affecte tous les agents et relève d'une
+/// permission : c'est une disposition partagée, pas une préférence personnelle.
+model PositionGraphe {
+  id String @id @default(uuid()) @db.Uuid
+
+  entiteId String @map("entite_id") @db.Uuid
+  entite   Entite @relation(fields: [entiteId], references: [id], onDelete: Cascade)
+
+  /// Nul pour la disposition globale.
+  dossierId String?  @map("dossier_id") @db.Uuid
+  dossier   Dossier? @relation(fields: [dossierId], references: [id], onDelete: Cascade)
+
+  x Float
+  y Float
+
+  modifiePar String   @map("modifie_par") @db.Uuid
+  auteur     Agent    @relation("position_auteur", fields: [modifiePar], references: [id], onDelete: Restrict)
+  modifieLe  DateTime @default(now()) @updatedAt @map("modifie_le") @db.Timestamptz(6)
+
+  @@index([dossierId])
+  @@index([entiteId])
+  @@map("position_graphe")
 }
 
 /// Index d'unicité des champs marqués uniques, sur valeur normalisée.
@@ -460,6 +489,7 @@ model Agent {
   habilitationsDossierDues HabilitationDossier[] @relation("habilitation_dossier_auteur")
   habilitationsEntite      HabilitationEntite[]  @relation("habilitation_entite_agent")
   habilitationsEntiteDues  HabilitationEntite[]  @relation("habilitation_entite_auteur")
+  positionsGraphe          PositionGraphe[]      @relation("position_auteur")
 
   @@map("agent")
 }

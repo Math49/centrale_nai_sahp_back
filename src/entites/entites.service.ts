@@ -19,6 +19,7 @@ import {
 import type { AgentCourant } from '../auth/agent-courant';
 import { DossiersService } from '../dossiers/dossiers.service';
 import { JournalAuditService } from '../journal/journal-audit.service';
+import { BusInvalidation } from '../graphe/bus-invalidation';
 import { PrismaService } from '../prisma/prisma.service';
 import { VisibiliteService } from '../visibilite/visibilite.service';
 import type {
@@ -73,6 +74,7 @@ export class EntitesService {
     private readonly visibilite: VisibiliteService,
     private readonly dossiers: DossiersService,
     private readonly audit: JournalAuditService,
+    private readonly bus: BusInvalidation,
   ) {}
 
   // ─────────────────────────── Création ───────────────────────────
@@ -186,6 +188,7 @@ export class EntitesService {
         }),
     );
 
+    this.bus.signaler();
     return this.lire(agent, id);
   }
 
@@ -528,6 +531,7 @@ export class EntitesService {
       );
     });
 
+    this.bus.signaler();
     return this.lire(agent, id);
   }
 
@@ -573,6 +577,7 @@ export class EntitesService {
       );
     });
 
+    this.bus.signaler();
     return this.lire(agent, id);
   }
 

@@ -9,6 +9,7 @@ import { Prisma, Visibilite, type Dossier } from '@prisma/client';
 import { PERMISSIONS } from '../agents/permissions';
 import type { AgentCourant } from '../auth/agent-courant';
 import { JournalAuditService } from '../journal/journal-audit.service';
+import { BusInvalidation } from '../graphe/bus-invalidation';
 import { PrismaService } from '../prisma/prisma.service';
 import { VisibiliteService } from '../visibilite/visibilite.service';
 import type {
@@ -35,6 +36,7 @@ export class DossiersService {
     private readonly prisma: PrismaService,
     private readonly visibilite: VisibiliteService,
     private readonly audit: JournalAuditService,
+    private readonly bus: BusInvalidation,
   ) {}
 
   async creer(
@@ -55,7 +57,7 @@ export class DossiersService {
     }
 
     try {
-      return await this.prisma.$transaction(async (transaction) => {
+      const cree = await this.prisma.$transaction(async (transaction) => {
         const dossier = await transaction.dossier.create({
           data: {
             nom: donnees.nom.trim(),
@@ -89,6 +91,10 @@ export class DossiersService {
 
         return dossier;
       });
+
+      // Le pivot entre dans le suivi : les récurrences en dépendent.
+      this.bus.signaler();
+      return cree;
     } catch (erreur) {
       if (
         erreur instanceof Prisma.PrismaClientKnownRequestError &&
@@ -114,26 +120,33 @@ export class DossiersService {
   ): Promise<Dossier> {
     const avant = await this.charger(id);
 
-    return this.prisma.$transaction(async (transaction) => {
-      const apres = await transaction.dossier.update({
-        where: { id },
-        data: { visibilite },
-      });
+    const apresTransaction = await this.prisma.$transaction(
+      async (transaction) => {
+        const apres = await transaction.dossier.update({
+          where: { id },
+          data: { visibilite },
+        });
 
-      await this.audit.tracer(
-        {
-          agentId,
-          action: 'dossier.modifier',
-          cibleTable: 'dossier',
-          cibleId: id,
-          avant: { visibilite: avant.visibilite },
-          apres: { visibilite },
-        },
-        transaction,
-      );
+        await this.audit.tracer(
+          {
+            agentId,
+            action: 'dossier.modifier',
+            cibleTable: 'dossier',
+            cibleId: id,
+            avant: { visibilite: avant.visibilite },
+            apres: { visibilite },
+          },
+          transaction,
+        );
 
-      return apres;
-    });
+        return apres;
+      },
+    );
+
+    // La cascade en base a déjà recalculé les visibilités effectives ; le
+    // graphe en mémoire, lui, les porte en copie et doit être rechargé.
+    this.bus.signaler();
+    return apresTransaction;
   }
 
   async suivre(
@@ -148,6 +161,8 @@ export class DossiersService {
       create: { dossierId, entiteId, ajoutePar: agentId },
       update: {},
     });
+
+    this.bus.signaler();
   }
 
   /** Whitelist : l'habilitation est nominative, jamais déduite d'un grade. */
@@ -385,6 +400,7 @@ export class DossiersService {
         throw this.traduireNomEnDouble(erreur);
       });
 
+    this.bus.signaler();
     return this.panneau(agent, id);
   }
 
@@ -402,6 +418,7 @@ export class DossiersService {
     }
 
     await this.prisma.suivi.deleteMany({ where: { dossierId, entiteId } });
+    this.bus.signaler();
   }
 
   /**

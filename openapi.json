@@ -1883,6 +1883,156 @@
         ]
       }
     },
+    "/graphe": {
+      "get": {
+        "description": "Voisinage d’une entité, élagué pour cet agent **avant** traversée. Chaque nœud rapporte le nombre de voisins qu’il reste à déplier.",
+        "operationId": "GrapheController_voisinage",
+        "parameters": [
+          {
+            "name": "depuis",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "profondeur",
+            "required": false,
+            "in": "query",
+            "description": "Nombre de sauts, 1 à 4",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "fiabilite",
+            "required": false,
+            "in": "query",
+            "description": "Niveau minimal des arêtes retenues, 1 à 4",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "dossier",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoisinageDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Exploration par expansion",
+        "tags": [
+          "graphe"
+        ]
+      }
+    },
+    "/graphe/chemin": {
+      "get": {
+        "description": "Deux résultats : le trajet le plus court et le plus solide. Un chemin passant par un lien masqué n’existe pas pour l’agent concerné — la plateforme ne dit jamais qu’un chemin existe mais reste inaccessible.",
+        "operationId": "GrapheController_chemin",
+        "parameters": [
+          {
+            "name": "de",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "vers",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "fiabilite",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheminsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Recherche de chemin",
+        "tags": [
+          "graphe"
+        ]
+      }
+    },
+    "/graphe/positions": {
+      "post": {
+        "description": "Par dossier lorsqu’un dossier est indiqué, globalement sinon. Le repositionnement affecte tous les agents : c’est une disposition partagée, d’où la permission.",
+        "operationId": "GrapheController_enregistrerPositions",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DispositionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Disposition mémorisée",
+        "tags": [
+          "graphe"
+        ]
+      }
+    },
     "/sante": {
       "get": {
         "operationId": "SanteController_lire",
@@ -4027,6 +4177,220 @@
             "type": "string"
           }
         }
+      },
+      "NoeudGrapheDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "libelle": {
+            "type": "string"
+          },
+          "typeCode": {
+            "type": "string"
+          },
+          "typeEntiteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "visibilite": {
+            "enum": [
+              "public",
+              "restreint",
+              "prive"
+            ],
+            "type": "string"
+          },
+          "voisinsNonAffiches": {
+            "type": "number",
+            "description": "Voisins atteignables mais non affichés — le badge d’expansion. Ne compte jamais ce qui est masqué à cet agent."
+          },
+          "recurrence": {
+            "type": "boolean",
+            "description": "Relie plusieurs entités appartenant à des dossiers différents"
+          },
+          "x": {
+            "type": "number",
+            "nullable": true
+          },
+          "y": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "libelle",
+          "typeCode",
+          "typeEntiteId",
+          "visibilite",
+          "voisinsNonAffiches",
+          "recurrence",
+          "x",
+          "y"
+        ]
+      },
+      "AreteGrapheDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identifiant du fait"
+          },
+          "sujetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cibleId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "typeLienId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "libelle": {
+            "type": "string"
+          },
+          "fiabilite": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 4
+          }
+        },
+        "required": [
+          "id",
+          "sujetId",
+          "cibleId",
+          "typeLienId",
+          "libelle",
+          "fiabilite"
+        ]
+      },
+      "VoisinageDto": {
+        "type": "object",
+        "properties": {
+          "noeuds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NoeudGrapheDto"
+            }
+          },
+          "aretes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AreteGrapheDto"
+            }
+          }
+        },
+        "required": [
+          "noeuds",
+          "aretes"
+        ]
+      },
+      "CheminDto": {
+        "type": "object",
+        "properties": {
+          "noeuds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NoeudGrapheDto"
+            }
+          },
+          "aretes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AreteGrapheDto"
+            }
+          },
+          "longueur": {
+            "type": "number",
+            "description": "Nombre de sauts"
+          },
+          "maillonLeFaible": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 4,
+            "description": "La fiabilité du chemin est celle de son maillon le plus faible"
+          }
+        },
+        "required": [
+          "noeuds",
+          "aretes",
+          "longueur",
+          "maillonLeFaible"
+        ]
+      },
+      "CheminsDto": {
+        "type": "object",
+        "properties": {
+          "plusCourt": {
+            "nullable": true,
+            "description": "Le trajet le plus court. Nul si aucun chemin n’existe.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CheminDto"
+              }
+            ]
+          },
+          "plusSolide": {
+            "nullable": true,
+            "description": "Le trajet dont le maillon le plus faible est le plus élevé. Nul lorsqu’il coïncide avec le plus court — un seul est alors affiché.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CheminDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "plusCourt",
+          "plusSolide"
+        ]
+      },
+      "PositionDto": {
+        "type": "object",
+        "properties": {
+          "entiteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "x": {
+            "type": "number"
+          },
+          "y": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "entiteId",
+          "x",
+          "y"
+        ]
+      },
+      "DispositionDto": {
+        "type": "object",
+        "properties": {
+          "dossierId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Disposition propre à ce dossier. Absent : disposition globale."
+          },
+          "positions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PositionDto"
+            }
+          }
+        },
+        "required": [
+          "positions"
+        ]
       },
       "SanteReponseDto": {
         "type": "object",
