@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   Logger,
   NotFoundException,
@@ -8,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomBytes } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 
 import type { AgentCourant } from '../auth/agent-courant';
@@ -157,6 +158,51 @@ export class FichiersService implements OnModuleInit {
     });
 
     return fichiers.map((fichier) => this.presenter(fichier));
+  }
+
+  async supprimer(agent: AgentCourant, id: string): Promise<void> {
+    const fichier = await this.prisma.sansFiltre.fichier.findUnique({
+      where: { id },
+      include: { faits: { select: { id: true } } },
+    });
+
+    if (!fichier) {
+      throw new NotFoundException('fichier inconnu');
+    }
+
+    await this.visibilite.entiteVisibleOuIntrouvable(agent, fichier.entiteId);
+
+    if (fichier.faits.length > 0) {
+      throw new ConflictException('image encore utilisée');
+    }
+
+    await this.prisma.$transaction(async (transaction) => {
+      await transaction.fichier.delete({ where: { id } });
+
+      await this.audit.tracer(
+        {
+          agentId: agent.id,
+          action: 'fichier.supprimer',
+          cibleTable: 'fichier',
+          cibleId: fichier.id,
+          avant: {
+            entiteId: fichier.entiteId,
+            nomOrigine: fichier.nomOrigine,
+            mime: fichier.mime,
+            taille: fichier.taille,
+          },
+        },
+        transaction,
+      );
+    });
+
+    try {
+      await unlink(join(this.racine(), fichier.chemin));
+    } catch {
+      this.journal.error(
+        `image référencée en base mais absente du volume : ${fichier.id}`,
+      );
+    }
   }
 
   /**

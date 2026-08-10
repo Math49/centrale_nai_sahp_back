@@ -1,6 +1,9 @@
 import {
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseUUIDPipe,
   Post,
@@ -75,6 +78,30 @@ export class FichiersController {
       nomOrigine: depot?.originalname ?? 'sans nom',
       octets: depot?.buffer ?? Buffer.alloc(0),
     });
+  }
+
+  @Delete('fichiers/:id')
+  @Permissions(PERMISSIONS.FAIT_CREER)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Suppression d’une image',
+    description:
+      'L’image disparaît du volume et de la base, sauf si un fait l’utilise encore.',
+  })
+  @ApiResponse({ status: 204 })
+  @ApiResponse({
+    status: 404,
+    description: 'Fichier inconnu ou fiche inaccessible',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Image encore utilisée par un fait',
+  })
+  supprimer(
+    @Agent() agent: AgentCourant,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<void> {
+    return this.fichiers.supprimer(agent, id);
   }
 
   /**
