@@ -38,7 +38,13 @@ services:
       # Secret de développement, sans valeur : la production reçoit le sien
       # par le fichier d'environnement du serveur (lot 12).
       JWT_SECRET: developpement-uniquement-secret-sans-valeur-32c
-      JWT_DUREE: 12h
+      JWT_DUREE: 7d
+      # En clair sur localhost : le cookie ne peut pas exiger HTTPS.
+      COOKIE_SECURE: 'false'
+      # Un fait « à confirmer » non revu au-delà de ce délai remonte en signal.
+      VIEILLISSEMENT_JOURS: 30
+      FICHIERS_RACINE: /app/donnees/fichiers
+      FICHIER_TAILLE_MAX_MO: 8
     ports:
       - '3000:3000'
     volumes:

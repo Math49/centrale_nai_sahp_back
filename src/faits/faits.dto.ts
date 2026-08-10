@@ -113,6 +113,22 @@ export class ModificationFaitDto {
   visibilite?: Visibilite;
 }
 
+/**
+ * Le motif d'une infirmation.
+ *
+ * Obligatoire : infirmer sans dire pourquoi laisserait la relecture du dossier
+ * devant un fait disparu sans explication. Il vit dans le journal d'audit, pas
+ * sur le fait — c'est une circonstance du geste, pas une propriété de
+ * l'information.
+ */
+export class InfirmationDto {
+  @ApiProperty({ description: 'Ce qui contredit le fait' })
+  @IsString()
+  @MinLength(3)
+  @MaxLength(512)
+  motif!: string;
+}
+
 export class FaitDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
   @ApiProperty({ format: 'uuid' }) sujetId!: string;

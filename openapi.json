@@ -1,8 +1,188 @@
 {
   "openapi": "3.0.0",
   "paths": {
+    "/journal/audit": {
+      "get": {
+        "description": "Toute écriture y figure. Les libellés d’agent et de cible sont recalculés à la lecture, jamais recopiés à l’écriture — une trace figée survivrait à une anonymisation.",
+        "operationId": "JournalController_audit",
+        "parameters": [
+          {
+            "name": "agent",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "cible",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "action",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "decalage",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "limite",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EntreeAuditDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Journal d’audit",
+        "tags": [
+          "journal"
+        ]
+      }
+    },
+    "/journal/consultations": {
+      "get": {
+        "description": "Toute lecture de fiche, **y compris celle d’un super-admin**, qui y est signalée comme telle. `derogation` distingue la lecture permise par habilitation de celle qui n’a été possible que par dérogation.",
+        "operationId": "JournalController_consultations",
+        "parameters": [
+          {
+            "name": "agent",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "objet",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "superAdmin",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "derogation",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "decalage",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "limite",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EntreeConsultationDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Journal de consultation",
+        "tags": [
+          "journal"
+        ]
+      }
+    },
+    "/journal/orphelines": {
+      "get": {
+        "description": "Entités sans aucun lien actif, qu’une saisie en cascade interrompue peut laisser derrière elle. Liste discrète : elles ne remontent jamais en signal sur l’accueil — ce n’est pas un rapprochement, c’est du ménage.",
+        "operationId": "JournalController_orphelines",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EntiteOrphelineDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Entités orphelines",
+        "tags": [
+          "journal"
+        ]
+      }
+    },
     "/auth/login": {
       "post": {
+        "description": "Pose un cookie de session `httpOnly`, valable le temps du jeton.",
         "operationId": "AuthController_connecter",
         "parameters": [],
         "requestBody": {
@@ -38,6 +218,7 @@
     },
     "/auth/moi": {
       "get": {
+        "description": "Le front s’en sert au démarrage pour savoir s’il a une session : le cookie étant `httpOnly`, il ne peut pas le lire lui-même.",
         "operationId": "AuthController_moi",
         "parameters": [],
         "responses": {
@@ -65,7 +246,7 @@
     },
     "/auth/mot-de-passe": {
       "post": {
-        "description": "Invalide tous les jetons de l'agent, y compris celui de l'appel : le jeton neuf renvoyé remplace le précédent.",
+        "description": "Invalide tous les jetons de l'agent, y compris celui de l'appel : le jeton neuf renvoyé remplace le précédent, et le cookie est reposé.",
         "operationId": "AuthController_changerMotDePasse",
         "parameters": [],
         "requestBody": {
@@ -96,6 +277,27 @@
           }
         ],
         "summary": "Changement de mot de passe",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/deconnexion": {
+      "post": {
+        "description": "Retire le cookie de session. Le jeton reste valide jusqu’à sa péremption — pour le révoquer immédiatement, c’est `token_version` qu’il faut incrémenter, ce que fait un changement de mot de passe.",
+        "operationId": "AuthController_deconnecter",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Déconnexion",
         "tags": [
           "auth"
         ]
@@ -1418,6 +1620,56 @@
         ]
       }
     },
+    "/entites/{id}/fusion": {
+      "post": {
+        "description": "L’entité de l’URL est absorbée par celle du corps, qui reçoit ses faits, ses fichiers, ses suivis et ses habilitations. L’absorbée reste en base, archivée, et **redirige** : un ancien lien vers elle continue de mener quelque part. La fiche renvoyée est celle qui subsiste.",
+        "operationId": "EntitesController_fusionner",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FusionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FicheEntiteDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Types différents, ou entité déjà fusionnée"
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Fusion de doublons",
+        "tags": [
+          "entites"
+        ]
+      }
+    },
     "/entites/{id}/archiver": {
       "post": {
         "description": "Rien n’est jamais supprimé : l’entité sort des écrans courants et reste consultable, ses faits intacts.",
@@ -1883,6 +2135,186 @@
         ]
       }
     },
+    "/faits/{id}/infirmer": {
+      "post": {
+        "description": "Un fait contredit sort du graphe actif et reste consultable dans l’onglet Historique. Il n’est jamais supprimé — ce que le service a cru un moment fait partie de ce qu’il a su.",
+        "operationId": "FaitsController_infirmer",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InfirmationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FaitDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Déjà infirmé"
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Infirmation",
+        "tags": [
+          "faits"
+        ]
+      }
+    },
+    "/entites/{id}/fichiers": {
+      "get": {
+        "description": "Les images d’une fiche inaccessible sont introuvables — 404, jamais 403.",
+        "operationId": "FichiersController_lister",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FichierDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Images d’une entité",
+        "tags": [
+          "fichiers"
+        ]
+      },
+      "post": {
+        "description": "Le type est vérifié **sur le contenu** et non sur l’extension, la taille est plafonnée, et les métadonnées — EXIF, GPS, commentaires — sont retirées sans réencoder l’image.",
+        "operationId": "FichiersController_deposer",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "fichier": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FichierDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Format refusé ou fichier vide"
+          },
+          "413": {
+            "description": "Au-delà du plafond de taille"
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Dépôt d’une image",
+        "tags": [
+          "fichiers"
+        ]
+      }
+    },
+    "/fichiers/{id}": {
+      "get": {
+        "description": "Aucun dossier n’est servi en statique : les droits sont vérifiés avant que l’octet ne parte.",
+        "operationId": "FichiersController_telecharger",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "L’image"
+          },
+          "404": {
+            "description": "Inconnu, ou fiche inaccessible"
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Téléchargement authentifié",
+        "tags": [
+          "fichiers"
+        ]
+      }
+    },
     "/graphe": {
       "get": {
         "description": "Voisinage d’une entité, élagué pour cet agent **avant** traversée. Chaque nœud rapporte le nombre de voisins qu’il reste à déplier.",
@@ -1942,6 +2374,53 @@
           }
         ],
         "summary": "Exploration par expansion",
+        "tags": [
+          "graphe"
+        ]
+      }
+    },
+    "/graphe/complet": {
+      "get": {
+        "description": "Tout ce que l’agent peut voir, à toute profondeur, élagué **avant** constitution. Les fiches isolées y figurent : une entité sans lien fait partie de ce que le service sait.",
+        "operationId": "GrapheController_vueEntiere",
+        "parameters": [
+          {
+            "name": "fiabilite",
+            "required": false,
+            "in": "query",
+            "description": "Niveau minimal des arêtes retenues, 1 à 4",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "dossier",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoisinageDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Vue entière",
         "tags": [
           "graphe"
         ]
@@ -2033,6 +2512,104 @@
         ]
       }
     },
+    "/accueil": {
+      "get": {
+        "description": "Signaux, dossiers de l’agent et dernière activité en une requête. Tout y est calculé **après** filtrage de visibilité : un signal portant sur un objet inaccessible ne remonte pas, sa seule mention en révélerait l’existence.",
+        "operationId": "SignauxController_accueil",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccueilDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Écran d’accueil, assemblé",
+        "tags": [
+          "accueil"
+        ]
+      }
+    },
+    "/signaux": {
+      "get": {
+        "description": "Recoupement, récurrence et vieillissement. Les trois familles se calculent sur ce que cet agent voit, et sur rien d’autre.",
+        "operationId": "SignauxController_liste",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SignalDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Signaux seuls",
+        "tags": [
+          "accueil"
+        ]
+      }
+    },
+    "/recherche": {
+      "get": {
+        "description": "Entités et dossiers. Les objets inaccessibles en sont absents, sans mention ni décompte : un total qui ne tombe pas juste est déjà une information.",
+        "operationId": "SignauxController_rechercher",
+        "parameters": [
+          {
+            "name": "q",
+            "required": true,
+            "in": "query",
+            "description": "Deux caractères au moins",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResultatRechercheDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Recherche globale",
+        "tags": [
+          "accueil"
+        ]
+      }
+    },
     "/sante": {
       "get": {
         "operationId": "SanteController_lire",
@@ -2083,6 +2660,145 @@
       }
     },
     "schemas": {
+      "EntreeAuditDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identifiant de l’entrée, sérialisé en texte"
+          },
+          "agentId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "agentLibelle": {
+            "type": "string",
+            "description": "« agent supprimé » si le compte est anonymisé"
+          },
+          "action": {
+            "type": "string"
+          },
+          "cibleTable": {
+            "type": "string"
+          },
+          "cibleId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "cibleLibelle": {
+            "type": "string",
+            "nullable": true,
+            "description": "Libellé de la cible, lorsqu’elle est retrouvable"
+          },
+          "avant": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "apres": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "effectueLe": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "agentId",
+          "agentLibelle",
+          "action",
+          "cibleTable",
+          "cibleId",
+          "cibleLibelle",
+          "effectueLe"
+        ]
+      },
+      "EntreeConsultationDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "agentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "agentLibelle": {
+            "type": "string"
+          },
+          "nature": {
+            "enum": [
+              "entite",
+              "dossier"
+            ],
+            "type": "string"
+          },
+          "objetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "objetLibelle": {
+            "type": "string",
+            "nullable": true
+          },
+          "derogation": {
+            "type": "boolean",
+            "description": "Lecture rendue possible par une permission dérogatoire"
+          },
+          "superAdmin": {
+            "type": "boolean",
+            "description": "Lecture d’un super-admin, signalée comme telle"
+          },
+          "consulteLe": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "agentId",
+          "agentLibelle",
+          "nature",
+          "objetId",
+          "objetLibelle",
+          "derogation",
+          "superAdmin",
+          "consulteLe"
+        ]
+      },
+      "EntiteOrphelineDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "libelle": {
+            "type": "string"
+          },
+          "typeCode": {
+            "type": "string"
+          },
+          "creeLe": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "auteur": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "libelle",
+          "typeCode",
+          "creeLe",
+          "auteur"
+        ]
+      },
       "ConnexionDto": {
         "type": "object",
         "properties": {
@@ -3673,6 +4389,19 @@
           }
         }
       },
+      "FusionDto": {
+        "type": "object",
+        "properties": {
+          "versId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "La fiche qui subsiste"
+          }
+        },
+        "required": [
+          "versId"
+        ]
+      },
       "DossierResumeDto": {
         "type": "object",
         "properties": {
@@ -4178,6 +4907,61 @@
           }
         }
       },
+      "InfirmationDto": {
+        "type": "object",
+        "properties": {
+          "motif": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 512,
+            "description": "Ce qui contredit le fait"
+          }
+        },
+        "required": [
+          "motif"
+        ]
+      },
+      "FichierDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "entiteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nomOrigine": {
+            "type": "string",
+            "description": "Nom du fichier tel que l’agent l’a déposé"
+          },
+          "mime": {
+            "type": "string",
+            "enum": [
+              "image/jpeg",
+              "image/png",
+              "image/webp"
+            ]
+          },
+          "taille": {
+            "type": "number",
+            "description": "Taille après retrait des métadonnées, en octets"
+          },
+          "deposeLe": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "entiteId",
+          "nomOrigine",
+          "mime",
+          "taille",
+          "deposeLe"
+        ]
+      },
       "NoeudGrapheDto": {
         "type": "object",
         "properties": {
@@ -4390,6 +5174,212 @@
         },
         "required": [
           "positions"
+        ]
+      },
+      "SignalDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Clé stable, pour que le front puisse suivre un signal"
+          },
+          "famille": {
+            "enum": [
+              "recoupement",
+              "recurrence",
+              "vieillissement"
+            ],
+            "type": "string"
+          },
+          "entiteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "entiteLibelle": {
+            "type": "string"
+          },
+          "typeCode": {
+            "type": "string"
+          },
+          "resume": {
+            "type": "string",
+            "description": "Ce que la centrale a remarqué, en une phrase"
+          },
+          "detail": {
+            "type": "string",
+            "description": "Ce sur quoi elle s’appuie"
+          },
+          "faitId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid",
+            "description": "Le fait en cause, pour le vieillissement"
+          }
+        },
+        "required": [
+          "id",
+          "famille",
+          "entiteId",
+          "entiteLibelle",
+          "typeCode",
+          "resume",
+          "detail",
+          "faitId"
+        ]
+      },
+      "DossierDeLAgentDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nom": {
+            "type": "string"
+          },
+          "visibilite": {
+            "enum": [
+              "public",
+              "restreint",
+              "prive"
+            ],
+            "type": "string"
+          },
+          "entitePivotId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "entitePivotLibelle": {
+            "type": "string"
+          },
+          "motif": {
+            "enum": [
+              "habilitation",
+              "creation"
+            ],
+            "type": "string",
+            "description": "Habilité nommément, ou auteur du dossier"
+          }
+        },
+        "required": [
+          "id",
+          "nom",
+          "visibilite",
+          "entitePivotId",
+          "entitePivotLibelle",
+          "motif"
+        ]
+      },
+      "ActiviteDto": {
+        "type": "object",
+        "properties": {
+          "faitId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "entiteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "entiteLibelle": {
+            "type": "string"
+          },
+          "resume": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "fiabilite": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 4
+          },
+          "auteur": {
+            "type": "string",
+            "nullable": true,
+            "description": "« agent supprimé » si anonymisé"
+          },
+          "survenuLe": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "faitId",
+          "entiteId",
+          "entiteLibelle",
+          "resume",
+          "source",
+          "fiabilite",
+          "auteur",
+          "survenuLe"
+        ]
+      },
+      "AccueilDto": {
+        "type": "object",
+        "properties": {
+          "signaux": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SignalDto"
+            }
+          },
+          "mesDossiers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DossierDeLAgentDto"
+            }
+          },
+          "derniereActivite": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ActiviteDto"
+            }
+          }
+        },
+        "required": [
+          "signaux",
+          "mesDossiers",
+          "derniereActivite"
+        ]
+      },
+      "ResultatRechercheDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "libelle": {
+            "type": "string"
+          },
+          "nature": {
+            "enum": [
+              "entite",
+              "dossier"
+            ],
+            "type": "string"
+          },
+          "typeCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "visibilite": {
+            "enum": [
+              "public",
+              "restreint",
+              "prive"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "libelle",
+          "nature",
+          "typeCode",
+          "visibilite"
         ]
       },
       "SanteReponseDto": {

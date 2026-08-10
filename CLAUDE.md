@@ -40,6 +40,16 @@ Elle départage tous les arbitrages d'implémentation.
    ne porte pas sur de l'information établie mais sur une frappe qui n'est
    jamais allée au bout, et quatre verrous la retiennent — auteur, heure,
    aucune référence entrante, aucun dossier.
+
+   **Arbitré, ne pas revenir dessus sans raison neuve.** L'étude du besoin le
+   décide explicitement (§6.6 et journal des modifications v1.3 : « annulation
+   explicite, qui supprime ce qui vient d'être créé »). Un archivage silencieux
+   aurait deux effets concrets : il **verrouillerait la valeur unique pour
+   toujours** — `valeur_unique` ne se recalcule que depuis `fait`, et aucun
+   trigger sur `entite` ne la touche, donc une plaque abandonnée resterait prise
+   — et il remplirait la liste des orphelines, qui existe pour les coupures
+   brutales et non pour les annulations voulues. La suppression écrit sa propre
+   trace d'audit : le geste reste lisible même si la ligne part.
 7. **Toute consultation de fiche est journalisée**, y compris celles du
    super-admin, qui sont en outre marquées comme telles.
 8. **Toute création, modification ou archivage passe par une confirmation
@@ -105,6 +115,20 @@ traversée, jamais après** : filtrer le résultat d'un parcours mené sur le
 graphe complet reviendrait à dire « un chemin existe, mais vous n'y avez pas
 droit », ce qui serait déjà l'avoir dit.
 
+**Une écriture hors du processus laisse le cache périmé.** Le bus d'invalidation
+vit dans le processus Nest : une commande de peuplement, une migration de
+données ou un `psql` à la main écrivent en base sans que l'API l'apprenne, et
+`/graphe/complet` renverra zéro nœud jusqu'au redémarrage. Après tout `npm run
+semences:*` lancé depuis l'hôte :
+
+```bash
+docker compose -f docker-compose.dev.yml restart api
+```
+
+`GET /graphe/complet` sert **la vue entière** — tous les nœuds visibles, toutes
+les arêtes franchissables, sans point de départ. C'est ce que charge l'écran de
+graphe, qui navigue dans une carte plutôt que de déplier saut par saut.
+
 La décision reste celle de `contenuAccessible` : la règle des gardiens ne
 s'écrit qu'à un endroit. Seule la façon de rassembler les gardiens change —
 en mémoire plutôt qu'en base.
@@ -112,6 +136,97 @@ en mémoire plutôt qu'en base.
 Le **plus solide** maximise le minimum de fiabilité. Les quatre niveaux étant
 peu nombreux, on cherche par seuil décroissant plutôt qu'avec un Dijkstra :
 le premier seuil qui relie encore donne le meilleur maillon faible possible.
+
+## Signaux
+
+Trois familles, **toutes calculées après filtrage**, jamais avant :
+
+| Famille | Ce qu'elle remarque | Réserve |
+| --- | --- | --- |
+| Recoupement | Une entité suivie par plusieurs dossiers | Se tait si les pivots sont déjà reliés |
+| Récurrence | Une entité reliant des entités de dossiers différents | Calculée par le graphe, sur la vue élaguée |
+| Vieillissement | Un fait « à confirmer » non revu | Seuil `VIEILLISSEMENT_JOURS`, 30 par défaut |
+
+Le recoupement part des dossiers dont le **contenu** est lisible, pas de ceux
+dont l'existence l'est : un dossier restreint montre son nom et garde son suivi
+fermé, et recouper dessus dirait qui il surveille.
+
+« Revu » se lit sur `fait.modifie_le`, que le trigger `trg_fait_horodatage`
+réécrit à chaque `UPDATE`. Un test qui veut vieillir un fait doit désarmer ce
+trigger : c'est la base qui garantit qu'un fait ne peut pas se déclarer revu
+sans l'avoir été.
+
+## Traçabilité
+
+Deux journaux, deux tables : `journal_consultation` (lectures de fiche) et
+`journal_audit` (écritures). Tous deux **applicatifs et non triggers** — un
+trigger ne connaît pas l'agent courant.
+
+`IntercepteurJournal` est monté globalement, et **en sortie seulement** : une
+requête refusée ou en erreur n'a rien produit, et la journaliser laisserait
+croire à un geste qui n'a pas eu lieu.
+
+L'audit générique ne s'écrit **que si le service n'a pas tracé lui-même**.
+`ContexteJournal` tient ce décompte dans un `AsyncLocalStorage`, parce que la
+trace part souvent de l'intérieur d'une transaction, loin de la requête HTTP.
+Conséquence voulue : **le mode de défaillance de l'oubli est une trace pauvre,
+jamais un silence** — il n'y a rien à se rappeler de faire.
+
+Piège à connaître : la portée doit envelopper l'**abonnement** à l'observable,
+pas sa construction. `suite.handle()` ne fait que décrire le traitement ; Nest
+ne s'y abonne qu'après, et une portée ouverte autour du seul appel laisserait le
+contrôleur s'exécuter dehors.
+
+Marquer une route de lecture de fiche avec `@Consultation('entite' | 'dossier')`
+— pas toute lecture : noter chaque annuaire noierait un journal qui existe pour
+être relu. `@HorsAudit()` dispense une écriture qui ne touche pas
+l'information d'enquête, et se justifie en revue.
+
+`derogation` distingue la lecture permise par habilitation nominative de celle
+qui n'a été possible que par une permission dérogatoire. C'est ce que le journal
+existe pour rendre visible.
+
+## Cycle de vie
+
+**Infirmation** — `POST /faits/:id/infirmer`, motif obligatoire. Le motif vit
+dans le journal, pas sur le fait : c'est une circonstance du geste, pas une
+propriété de l'information. Les triggers font le reste — la projection ignore
+les faits non actifs, donc la valeur quitte la fiche, et `valeur_unique` se
+recalcule, donc la plaque redevient attribuable.
+
+**Fusion** — `POST /entites/:id/fusion`, où `:id` est **absorbée** et `versId`
+subsiste, dans le sens de la colonne `fusionnee_vers_id`. Deux précautions :
+les liens entre les deux doublons s'infirment d'abord, sans quoi ils
+violeraient `fait_pas_de_boucle` ; suivis et habilitations se reportent par
+upsert, leurs clés primaires étant composites. L'absorbée reste en base,
+archivée, et redirige.
+
+**Classement en restreint ou privé** — `visibilite.verifierDroitDeClasser`, le
+seul endroit. Le contrôle n'existait que côté dossier jusqu'au lot 11 : entité
+et fait acceptaient un niveau sans vérifier `visibilite.definir`.
+
+## Fichiers
+
+Quatre règles, et la quatrième est celle qu'on oublie :
+
+- **jamais servi en statique** — aucun dossier n'est exposé par le proxy, un
+  contrôleur vérifie l'accès à la fiche avant de renvoyer l'octet ;
+- **nom opaque** sur le volume, le nom d'origine ne vivant qu'en base ;
+- **type reconnu sur le contenu**, jamais sur l'extension ;
+- **métadonnées retirées sans réencodage** — on écarte des segments, on ne
+  recompresse pas : une pièce d'enquête ne doit pas ressortir dégradée du dépôt.
+  C'est aussi ce qui évite une dépendance native au traitement d'image.
+
+Le stockage multer est **en mémoire**, à dessein : le fichier doit être reconnu
+et nettoyé avant d'atteindre le volume. Un stockage sur disque écrirait d'abord
+et vérifierait ensuite, ce qui laisserait passer l'original.
+
+Le résultat du nettoyage est **relu** (`porteDesMetadonnees`) avant l'écriture :
+un nettoyage qui aurait échoué fait refuser le dépôt plutôt que de verser une
+image encore géolocalisée.
+
+Le chemin opaque ne se relit nulle part — ni dans un DTO, ni dans le journal
+d'audit. C'est la seule chose qui protège le volume.
 
 ## Migrations — ce qui marche ici
 
@@ -240,8 +355,8 @@ pas. Ne pas tenter de l'empêcher — toute contre-mesure révélerait l'entité
 - **Le journal désigne un agent par son `id`, jamais par son matricule ni son
   nom.** Une trace qui recopierait ces valeurs les rendrait relisibles après une
   anonymisation, qui perdrait alors son sens. Un test le vérifie.
-- **`journal_audit.id` est un `bigserial`**, que `JSON.stringify` ne sait pas
-  sérialiser. Les DTO du lot 11 devront le convertir explicitement.
+- **`journal_audit.id` et `journal_consultation.id` sont des `bigserial`**, que
+  `JSON.stringify` ne sait pas sérialiser. Les DTO les convertissent en texte.
 - **npm intercepte les options longues qu'il ne connaît pas**, même après `--`.
   Les commandes lancées par `npm run` prennent des arguments positionnels.
 
@@ -284,6 +399,14 @@ Le catalogue vit dans `src/agents/permissions.ts`. Il reprend la conception
 `agent.anonymiser` à l'État-Major, lui refuser la création d'un compte tout en
 lui permettant d'en retirer un aurait été incohérent.
 
+**Ne pas gouverner un écran par la permission de la zone qui l'héberge.** La
+liste des entités orphelines vit en administration mais dépend
+d'`entite.archiver`, pas de `journal.consulter` : lier une liste de ménage à la
+permission des journaux signifierait qu'on ne peut confier l'une sans confier
+l'autre, alors que le relevé de qui a consulté quoi est un pouvoir d'une tout
+autre nature. Côté front, la zone Administration s'ouvre donc aussi sur
+`entite.archiver`, chaque rubrique restant filtrée par la sienne.
+
 ## Commandes
 
 ```bash
@@ -314,9 +437,9 @@ applique les migrations avant de lancer jest.
 | 7 — Fiche entité (back) | fait |
 | 8 — Dossiers | fait |
 | 9 — Graphe | fait |
-| 10 — Signaux | à faire |
-| 11 — Traçabilité | à faire |
-| 12 — Exploitation | à faire |
+| 10 — Signaux | fait |
+| 11 — Traçabilité | fait |
+| 12 — Exploitation | fait |
 
 Les lots 2 et 6 sont côté front.
 
@@ -325,3 +448,23 @@ Les lots 2 et 6 sont côté front.
 Rejouer intégralement le **parcours Madrina** (étude du besoin, annexe B) et
 faire ressortir Isadora Morales **sans qu'aucun agent n'ait tracé de lien entre
 elle et Tyron Banks**. Le rapprochement doit tomber seul, par le graphe.
+
+`test/recette-madrina.e2e-spec.ts` le rejoue **par l'API**, sur base vierge et
+par un compte Junior. C'est le test à faire tourner avant toute mise en
+production, et le seul qui dise si le projet tient sa promesse.
+
+## Exploitation
+
+`docker-compose.yml` — quatre services et une tâche de sauvegarde. Les secrets
+vivent dans `.env.production`, jamais versionné ; `.env.production.example` en
+donne la forme.
+
+`deploiement/Caddyfile` ne sert **aucun dossier en statique**, et c'est
+volontaire au point de mériter d'être vérifié à chaque relecture : un
+`file_server` sur le volume de fichiers annulerait tout le moteur de visibilité.
+
+Les sauvegardes portent sur **la base et le volume**, dans une paire d'archives
+au même horodatage. Une base restaurée sans ses images est à moitié perdue :
+aucune source ne permet de réimporter les photos versées. `restaurer.sh` vérifie
+en fin de course que le décompte des images correspond à la table `fichier`, et
+échoue sur un écart.

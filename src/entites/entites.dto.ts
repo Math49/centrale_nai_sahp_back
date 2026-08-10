@@ -140,6 +140,18 @@ export class ModificationEntiteDto {
   visibilite?: Visibilite;
 }
 
+/**
+ * Fusion de doublons.
+ *
+ * L'entité de l'URL est **absorbée**, celle-ci est conservée. Le sens est celui
+ * de la colonne `fusionnee_vers_id` : « fusionner cette fiche vers celle-là ».
+ */
+export class FusionDto {
+  @ApiProperty({ format: 'uuid', description: 'La fiche qui subsiste' })
+  @IsUUID()
+  versId!: string;
+}
+
 // ───────────────────────────── Lecture ─────────────────────────────
 
 /** Valeur d'un champ telle qu'elle sort de l'API : scalaire, ou tableau si le

@@ -64,6 +64,39 @@ export class GrapheAssembleurService {
     };
   }
 
+  /**
+   * La vue entière, habillée.
+   *
+   * L'écran de graphe la charge d'un bloc : tout ce que l'agent peut voir, à
+   * toute profondeur. Le trafic attendu se compte en dizaines d'agents et en
+   * milliers de nœuds — la vue tient, et l'exploration devient une navigation
+   * plutôt qu'une succession de dépliages.
+   */
+  async vueEntiere(
+    agent: AgentCourant,
+    options: { fiabiliteMinimale: number; dossierId?: string },
+  ): Promise<VoisinageDto> {
+    const brut = await this.graphe.vueEntiere(agent, options.fiabiliteMinimale);
+
+    const [libelles, positions] = await Promise.all([
+      this.libellesDeLiens(),
+      this.positions(
+        brut.noeuds.map((noeud) => noeud.id),
+        options.dossierId,
+      ),
+    ]);
+
+    return {
+      noeuds: brut.noeuds.map((noeud) =>
+        this.presenterNoeud(noeud, positions, {
+          voisinsNonAffiches: noeud.voisinsNonAffiches,
+          recurrence: noeud.recurrence,
+        }),
+      ),
+      aretes: brut.aretes.map((arete) => this.presenterArete(arete, libelles)),
+    };
+  }
+
   async chemins(
     agent: AgentCourant,
     de: string,

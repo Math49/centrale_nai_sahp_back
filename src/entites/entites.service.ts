@@ -85,6 +85,10 @@ export class EntitesService {
   ): Promise<FicheEntiteDto> {
     const type = await this.chargerType(donnees.typeEntiteId);
 
+    if (donnees.visibilite !== undefined) {
+      this.visibilite.verifierDroitDeClasser(agent, donnees.visibilite);
+    }
+
     const champsSaisis = donnees.champs ?? [];
     const liensSaisis = donnees.liens ?? [];
 
@@ -515,6 +519,10 @@ export class EntitesService {
   ): Promise<FicheEntiteDto> {
     const avant = await this.visibilite.entiteVisibleOuIntrouvable(agent, id);
 
+    if (donnees.visibilite !== undefined) {
+      this.visibilite.verifierDroitDeClasser(agent, donnees.visibilite);
+    }
+
     await this.prisma.$transaction(async (transaction) => {
       await transaction.entite.update({ where: { id }, data: donnees });
 
@@ -533,6 +541,204 @@ export class EntitesService {
 
     this.bus.signaler();
     return this.lire(agent, id);
+  }
+
+  /**
+   * Fusion de doublons — `id` est **absorbée**, `versId` est conservée.
+   *
+   * Tout ce que portait l'absorbée passe à la conservée : ses faits, dans les
+   * deux sens, ses fichiers, ses suivis, ses habilitations, et jusqu'aux
+   * dossiers qui l'avaient prise pour pivot. Rien ne se perd, et rien ne se
+   * supprime — l'absorbée reste en base, archivée, avec `fusionnee_vers_id`
+   * qui la fait rediriger.
+   *
+   * C'est cette redirection qui rend la fusion sûre : un lien de la centrale
+   * vers l'ancienne fiche, une trace de journal, un signet d'agent continuent
+   * de mener quelque part.
+   *
+   * Deux précautions valent d'être dites :
+   *
+   * - **Les liens entre les deux doublons s'infirment d'abord.** Une fois
+   *   fusionnés, ils relieraient l'entité à elle-même, ce que la contrainte
+   *   `fait_pas_de_boucle` refuse — et à raison : « Tyron est propriétaire de
+   *   Tyron » n'affirme rien.
+   * - **Les suivis et les habilitations se reportent par upsert.** Les deux
+   *   doublons peuvent être suivis par le même dossier, et leur clé primaire
+   *   est composite.
+   */
+  async fusionner(
+    agent: AgentCourant,
+    id: string,
+    versId: string,
+  ): Promise<FicheEntiteDto> {
+    if (id === versId) {
+      throw new BadRequestException(
+        'une entité ne fusionne pas avec elle-même',
+      );
+    }
+
+    // Les deux passent par le contrôle de visibilité : fusionner vers une
+    // fiche qu'on ne voit pas reviendrait à en confirmer l'existence.
+    const [absorbee, conservee] = await Promise.all([
+      this.visibilite.entiteVisibleOuIntrouvable(agent, id),
+      this.visibilite.entiteVisibleOuIntrouvable(agent, versId),
+    ]);
+
+    if (absorbee.typeEntiteId !== conservee.typeEntiteId) {
+      throw new ConflictException(
+        'deux entités de types différents ne sont pas des doublons',
+      );
+    }
+
+    const etat = await this.prisma.sansFiltre.entite.findUniqueOrThrow({
+      where: { id },
+      select: { fusionneeVersId: true },
+    });
+
+    if (etat.fusionneeVersId) {
+      throw new ConflictException('cette entité a déjà été fusionnée');
+    }
+
+    await this.executer(
+      { typeEntiteId: conservee.typeEntiteId, entiteId: versId, champs: [] },
+      () =>
+        this.prisma.$transaction(async (transaction) => {
+          // 1 — les liens entre les deux doublons, qui deviendraient des boucles
+          const entreLesDeux = await transaction.fait.updateMany({
+            where: {
+              nature: NatureFait.lien,
+              etat: EtatFait.actif,
+              OR: [
+                { sujetId: id, cibleId: versId },
+                { sujetId: versId, cibleId: id },
+              ],
+            },
+            data: { etat: EtatFait.infirme, modifiePar: agent.id },
+          });
+
+          // 2 — les faits, dans les deux sens
+          await transaction.fait.updateMany({
+            where: { sujetId: id },
+            data: { sujetId: versId },
+          });
+          await transaction.fait.updateMany({
+            where: { cibleId: id },
+            data: { cibleId: versId },
+          });
+
+          // 3 — ce qui pendait à l'absorbée
+          await transaction.fichier.updateMany({
+            where: { entiteId: id },
+            data: { entiteId: versId },
+          });
+          await transaction.dossier.updateMany({
+            where: { entitePivotId: id },
+            data: { entitePivotId: versId },
+          });
+
+          await this.reporterSuivis(transaction, id, versId);
+          await this.reporterHabilitations(transaction, id, versId);
+
+          // Les positions du graphe se jettent plutôt qu'elles ne se reportent :
+          // deux nœuds fusionnés n'ont pas deux places sur la toile.
+          await transaction.positionGraphe.deleteMany({
+            where: { entiteId: id },
+          });
+
+          // 4 — la redirection, et l'archivage de l'absorbée
+          await transaction.entite.update({
+            where: { id },
+            data: { fusionneeVersId: versId, etat: EtatEntite.archive },
+          });
+
+          await this.audit.tracer(
+            {
+              agentId: agent.id,
+              action: 'entite.fusionner',
+              cibleTable: 'entite',
+              cibleId: id,
+              avant: { etat: EtatEntite.actif, fusionneeVersId: null },
+              apres: {
+                etat: EtatEntite.archive,
+                fusionneeVersId: versId,
+                liensEntreDoublonsInfirmes: entreLesDeux.count,
+              },
+            },
+            transaction,
+          );
+        }),
+    );
+
+    this.bus.signaler();
+    return this.lire(agent, versId);
+  }
+
+  /** Report d'un suivi, en tolérant que les deux doublons soient déjà suivis. */
+  private async reporterSuivis(
+    transaction: Prisma.TransactionClient,
+    absorbee: string,
+    conservee: string,
+  ): Promise<void> {
+    const suivis = await transaction.suivi.findMany({
+      where: { entiteId: absorbee },
+    });
+
+    for (const suivi of suivis) {
+      await transaction.suivi.upsert({
+        where: {
+          dossierId_entiteId: {
+            dossierId: suivi.dossierId,
+            entiteId: conservee,
+          },
+        },
+        create: {
+          dossierId: suivi.dossierId,
+          entiteId: conservee,
+          ajoutePar: suivi.ajoutePar,
+        },
+        update: {},
+      });
+    }
+
+    await transaction.suivi.deleteMany({ where: { entiteId: absorbee } });
+  }
+
+  /**
+   * Report des habilitations.
+   *
+   * Elles s'additionnent : qui était habilité sur l'une des deux fiches l'est
+   * sur celle qui subsiste. Le contraire retirerait un accès à quelqu'un sans
+   * que personne ne l'ait décidé.
+   */
+  private async reporterHabilitations(
+    transaction: Prisma.TransactionClient,
+    absorbee: string,
+    conservee: string,
+  ): Promise<void> {
+    const habilitations = await transaction.habilitationEntite.findMany({
+      where: { entiteId: absorbee },
+    });
+
+    for (const habilitation of habilitations) {
+      await transaction.habilitationEntite.upsert({
+        where: {
+          entiteId_agentId: {
+            entiteId: conservee,
+            agentId: habilitation.agentId,
+          },
+        },
+        create: {
+          entiteId: conservee,
+          agentId: habilitation.agentId,
+          accordePar: habilitation.accordePar,
+        },
+        update: {},
+      });
+    }
+
+    await transaction.habilitationEntite.deleteMany({
+      where: { entiteId: absorbee },
+    });
   }
 
   /**

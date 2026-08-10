@@ -29,6 +29,7 @@ import {
   PanneauDossierDto,
 } from './dossiers.dto';
 import { DossiersService } from './dossiers.service';
+import { Consultation } from '../journal/decorateurs';
 
 /**
  * Dossiers.
@@ -57,6 +58,7 @@ export class DossiersController {
 
   @Get(':id')
   @SansPermission()
+  @Consultation('dossier')
   @ApiOperation({
     summary: 'Panneau de dossier',
     description:

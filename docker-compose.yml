@@ -1,0 +1,130 @@
+# Centrale N&I — déploiement de production.
+#
+# Quatre services et une tâche de sauvegarde, comme le prévoit la conception
+# technique §2. À lancer depuis ce dépôt ; le front est construit depuis le
+# dépôt voisin, indiqué par `CHEMIN_FRONT`.
+#
+#   cp .env.production.example .env.production
+#   # renseigner les secrets, puis :
+#   docker compose --env-file .env.production up -d --build
+#
+# **Instance unique, et c'est structurel** : le graphe vit en mémoire dans le
+# processus Nest. Mettre à l'échelle horizontalement exigerait de sortir le
+# cache dans un Redis partagé. Hors périmètre de la V1.
+
+name: centrale-ni
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - donnees_postgres:/var/lib/postgresql/data
+    # Aucun port publié : la base n'est jointe que par le réseau interne.
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: '3000'
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      CORS_ORIGINES: https://${DOMAINE}
+      # Jamais exposée en production : le contrat est figé et publié au front.
+      SWAGGER_ACTIF: 'false'
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_DUREE: ${JWT_DUREE:-7d}
+      # Le proxy TLS est la seule porte d'entrée : le cookie de session ne doit
+      # jamais repartir en clair.
+      COOKIE_SECURE: 'true'
+      VIEILLISSEMENT_JOURS: ${VIEILLISSEMENT_JOURS:-30}
+      FICHIERS_RACINE: /app/donnees/fichiers
+      FICHIER_TAILLE_MAX_MO: ${FICHIER_TAILLE_MAX_MO:-8}
+    volumes:
+      - fichiers:/app/donnees/fichiers
+    # Aucun port publié : le proxy est la seule porte d'entrée.
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/sante').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  front:
+    build:
+      context: ${CHEMIN_FRONT:-../centrale_nai_sahp_front}
+      dockerfile: Dockerfile
+      args:
+        # Inlinée dans le bundle à la construction : le front appelle l'API
+        # depuis le navigateur, jamais depuis son propre processus.
+        NEXT_PUBLIC_API_URL: https://${DOMAINE}/api
+    restart: unless-stopped
+    depends_on:
+      - api
+
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - api
+      - front
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      DOMAINE: ${DOMAINE}
+    volumes:
+      - ./deploiement/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_donnees:/data
+      - caddy_configuration:/config
+
+  # Sauvegarde quotidienne, base **et** volume de fichiers.
+  #
+  # Une base restaurée sans ses images est une base à moitié perdue : il
+  # n'existe aucune source depuis laquelle réimporter les photos versées.
+  sauvegarde:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+      PGHOST: postgres
+      RETENTION_JOURS: ${RETENTION_JOURS:-14}
+      HEURE_SAUVEGARDE: ${HEURE_SAUVEGARDE:-03}
+    volumes:
+      - fichiers:/source/fichiers:ro
+      - sauvegardes:/sauvegardes
+      - ./deploiement/sauvegarder.sh:/usr/local/bin/sauvegarder.sh:ro
+      - ./deploiement/restaurer.sh:/usr/local/bin/restaurer.sh:ro
+    entrypoint: ['/bin/sh', '/usr/local/bin/sauvegarder.sh', 'boucle']
+
+volumes:
+  donnees_postgres:
+  fichiers:
+  sauvegardes:
+  caddy_donnees:
+  caddy_configuration:

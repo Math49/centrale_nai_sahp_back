@@ -82,14 +82,15 @@ model Entite {
   creeLe    DateTime @default(now()) @map("cree_le") @db.Timestamptz(6)
   modifieLe DateTime @default(now()) @map("modifie_le") @db.Timestamptz(6)
 
-  faitsOuElleEstSujet Fait[]               @relation("fait_sujet")
-  faitsOuElleEstCible Fait[]               @relation("fait_cible")
+  faitsOuElleEstSujet Fait[]                @relation("fait_sujet")
+  faitsOuElleEstCible Fait[]                @relation("fait_cible")
   fichiers            Fichier[]
   valeursUniques      ValeurUnique[]
-  dossiersPivot       Dossier[]            @relation("dossier_pivot")
+  dossiersPivot       Dossier[]             @relation("dossier_pivot")
   suivis              Suivi[]
   habilitations       HabilitationEntite[]
   positions           PositionGraphe[]
+  consultations       JournalConsultation[]
 
   @@map("entite")
 }
@@ -203,6 +204,7 @@ model Dossier {
   habilitations  HabilitationDossier[]
   faitsSaisisIci Fait[]
   positions      PositionGraphe[]
+  consultations  JournalConsultation[]
 
   @@map("dossier")
 }
@@ -478,10 +480,11 @@ model Agent {
 
   creeLe DateTime @default(now()) @map("cree_le") @db.Timestamptz(6)
 
-  entreesJournalAudit JournalAudit[] @relation("auteur_audit")
-  entitesCreees       Entite[]       @relation("entite_auteur")
-  faitsCrees          Fait[]         @relation("fait_auteur")
-  fichiersDeposes     Fichier[]      @relation("fichier_deposeur")
+  entreesJournalAudit        JournalAudit[]        @relation("auteur_audit")
+  entreesJournalConsultation JournalConsultation[] @relation("auteur_consultation")
+  entitesCreees              Entite[]              @relation("entite_auteur")
+  faitsCrees                 Fait[]                @relation("fait_auteur")
+  fichiersDeposes            Fichier[]             @relation("fichier_deposeur")
 
   dossiersCrees            Dossier[]             @relation("dossier_auteur")
   suivisAjoutes            Suivi[]               @relation("suivi_auteur")
@@ -494,8 +497,43 @@ model Agent {
   @@map("agent")
 }
 
-/// Journal d'audit. L'intercepteur générique arrive au lot 11 ; le lot 1 n'y
-/// écrit que les gestes d'administration des comptes, dont l'anonymisation.
+/// Journal de consultation.
+///
+/// Toute lecture de fiche y laisse une trace, **y compris celle d'un
+/// super-admin**, qui est en outre marquée comme telle : sans cela, l'accès
+/// total du développeur serait le point faible du dispositif qu'il protège.
+///
+/// `derogation` distingue la lecture ordinaire de celle qui n'a été possible
+/// que par une permission dérogatoire — c'est ce que le journal existe pour
+/// rendre visible.
+model JournalConsultation {
+  id BigInt @id @default(autoincrement())
+
+  agentId String @map("agent_id") @db.Uuid
+  agent   Agent  @relation("auteur_consultation", fields: [agentId], references: [id], onDelete: Restrict)
+
+  entiteId String? @map("entite_id") @db.Uuid
+  entite   Entite? @relation(fields: [entiteId], references: [id], onDelete: Restrict)
+
+  dossierId String?  @map("dossier_id") @db.Uuid
+  dossier   Dossier? @relation(fields: [dossierId], references: [id], onDelete: Restrict)
+
+  derogation Boolean @default(false)
+  superAdmin Boolean @default(false) @map("super_admin")
+
+  consulteLe DateTime @default(now()) @map("consulte_le") @db.Timestamptz(6)
+
+  @@index([entiteId])
+  @@index([dossierId])
+  @@index([consulteLe])
+  @@index([agentId])
+  @@map("journal_consultation")
+}
+
+/// Journal d'audit — toute écriture, tracée par l'intercepteur.
+///
+/// Un service qui trace lui-même, avec un `avant` et un `apres` circonstanciés,
+/// prend le pas sur la trace générique : voir `ContexteJournal`.
 model JournalAudit {
   id BigInt @id @default(autoincrement())
 

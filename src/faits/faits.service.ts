@@ -4,7 +4,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { NatureFait, Prisma, Visibilite, type Fait } from '@prisma/client';
+import {
+  EtatFait,
+  NatureFait,
+  Prisma,
+  Visibilite,
+  type Fait,
+} from '@prisma/client';
 
 import type { AgentCourant } from '../auth/agent-courant';
 import { UniciteService } from '../entites/unicite.service';
@@ -34,6 +40,10 @@ export class FaitsService {
     // Écrire sur une entité qu'on ne voit pas est impossible : 404, comme en
     // lecture, pour ne pas confirmer son existence.
     await this.visibilite.entiteVisibleOuIntrouvable(agent, donnees.sujetId);
+
+    if (donnees.visibilite !== undefined) {
+      this.visibilite.verifierDroitDeClasser(agent, donnees.visibilite);
+    }
 
     const sujet = await this.prisma.sansFiltre.entite.findUniqueOrThrow({
       where: { id: donnees.sujetId },
@@ -200,7 +210,10 @@ export class FaitsService {
 
     if (donnees.source !== undefined) data.source = donnees.source.trim();
     if (donnees.fiabilite !== undefined) data.fiabilite = donnees.fiabilite;
-    if (donnees.visibilite !== undefined) data.visibilite = donnees.visibilite;
+    if (donnees.visibilite !== undefined) {
+      this.visibilite.verifierDroitDeClasser(agent, donnees.visibilite);
+      data.visibilite = donnees.visibilite;
+    }
     if (donnees.dateConstatation !== undefined) {
       data.dateConstatation = new Date(donnees.dateConstatation);
     }
@@ -248,6 +261,61 @@ export class FaitsService {
           return misAJour;
         }),
     );
+
+    this.bus.signaler();
+    return this.presenter(fait);
+  }
+
+  /**
+   * Infirmation — un fait contredit passe en état `infirme`.
+   *
+   * Il **sort du graphe actif** et reste consultable dans l'onglet Historique.
+   * Il n'est jamais supprimé : ce que le service a cru un moment fait partie de
+   * ce que le service a su, et l'effacer réécrirait son histoire.
+   *
+   * Les triggers font le reste sans qu'on ait à y penser — la projection ignore
+   * les faits non actifs, donc la valeur disparaît de la fiche, et l'unicité se
+   * recalcule, donc la plaque redevient attribuable.
+   */
+  async infirmer(
+    agent: AgentCourant,
+    id: string,
+    motif: string,
+  ): Promise<FaitDto> {
+    const avant = await this.visibilite.clientPour(agent).fait.findFirst({
+      where: { id },
+    });
+
+    if (!avant) {
+      throw new NotFoundException('fait inconnu');
+    }
+
+    if (avant.etat === EtatFait.infirme) {
+      throw new ConflictException('ce fait est déjà infirmé');
+    }
+
+    const fait = await this.prisma.$transaction(async (transaction) => {
+      const infirme = await transaction.fait.update({
+        where: { id },
+        data: { etat: EtatFait.infirme, modifiePar: agent.id },
+      });
+
+      // Le motif vit dans le journal et non sur le fait : c'est une
+      // circonstance de l'infirmation, pas une propriété de l'information.
+      await this.audit.tracer(
+        {
+          agentId: agent.id,
+          action: 'fait.infirmer',
+          cibleTable: 'fait',
+          cibleId: id,
+          avant: { etat: avant.etat },
+          apres: { etat: infirme.etat, motif: motif.trim() },
+        },
+        transaction,
+      );
+
+      return infirme;
+    });
 
     this.bus.signaler();
     return this.presenter(fait);

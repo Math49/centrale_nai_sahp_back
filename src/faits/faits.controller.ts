@@ -1,6 +1,8 @@
 import {
   Body,
   Controller,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -16,7 +18,12 @@ import {
 import { PERMISSIONS } from '../agents/permissions';
 import { Agent, type AgentCourant } from '../auth/agent-courant';
 import { Permissions } from '../auth/decorateurs';
-import { CreationFaitDto, FaitDto, ModificationFaitDto } from './faits.dto';
+import {
+  CreationFaitDto,
+  FaitDto,
+  InfirmationDto,
+  ModificationFaitDto,
+} from './faits.dto';
 import { FaitsService } from './faits.service';
 
 @ApiTags('faits')
@@ -54,5 +61,23 @@ export class FaitsController {
     @Body() corps: ModificationFaitDto,
   ): Promise<FaitDto> {
     return this.faits.modifier(agent, id, corps);
+  }
+
+  @Post(':id/infirmer')
+  @Permissions(PERMISSIONS.FAIT_INFIRMER)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Infirmation',
+    description:
+      'Un fait contredit sort du graphe actif et reste consultable dans l’onglet Historique. Il n’est jamais supprimé — ce que le service a cru un moment fait partie de ce qu’il a su.',
+  })
+  @ApiResponse({ status: 200, type: FaitDto })
+  @ApiResponse({ status: 409, description: 'Déjà infirmé' })
+  infirmer(
+    @Agent() agent: AgentCourant,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() corps: InfirmationDto,
+  ): Promise<FaitDto> {
+    return this.faits.infirmer(agent, id, corps.motif);
   }
 }

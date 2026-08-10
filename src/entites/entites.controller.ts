@@ -30,10 +30,12 @@ import {
   EntiteResumeeDto,
   EvenementHistoriqueDto,
   FicheEntiteDto,
+  FusionDto,
   ModificationEntiteDto,
   SuggestionDoublonDto,
 } from './entites.dto';
 import { EntitesService } from './entites.service';
+import { Consultation } from '../journal/decorateurs';
 
 @ApiTags('entites')
 @ApiBearerAuth('jeton')
@@ -90,6 +92,7 @@ export class EntitesController {
 
   @Get(':id')
   @SansPermission()
+  @Consultation('entite')
   @ApiOperation({
     summary: 'Fiche assemblée',
     description:
@@ -168,6 +171,27 @@ export class EntitesController {
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<void> {
     return this.entites.annulerCreation(agent, id);
+  }
+
+  @Post(':id/fusion')
+  @Permissions(PERMISSIONS.ENTITE_FUSIONNER)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Fusion de doublons',
+    description:
+      'L’entité de l’URL est absorbée par celle du corps, qui reçoit ses faits, ses fichiers, ses suivis et ses habilitations. L’absorbée reste en base, archivée, et **redirige** : un ancien lien vers elle continue de mener quelque part. La fiche renvoyée est celle qui subsiste.',
+  })
+  @ApiResponse({ status: 200, type: FicheEntiteDto })
+  @ApiResponse({
+    status: 409,
+    description: 'Types différents, ou entité déjà fusionnée',
+  })
+  fusionner(
+    @Agent() agent: AgentCourant,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() corps: FusionDto,
+  ): Promise<FicheEntiteDto> {
+    return this.entites.fusionner(agent, id, corps.versId);
   }
 
   @Post(':id/archiver')

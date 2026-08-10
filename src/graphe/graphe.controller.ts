@@ -20,6 +20,7 @@ import {
 import { PERMISSIONS } from '../agents/permissions';
 import { Agent, type AgentCourant } from '../auth/agent-courant';
 import { Permissions, SansPermission } from '../auth/decorateurs';
+import { HorsAudit } from '../journal/decorateurs';
 import { CheminsDto, DispositionDto, VoisinageDto } from './graphe.dto';
 import { GrapheAssembleurService } from './graphe-assembleur.service';
 
@@ -65,6 +66,32 @@ export class GrapheController {
     });
   }
 
+  @Get('complet')
+  @SansPermission()
+  @ApiOperation({
+    summary: 'Vue entière',
+    description:
+      'Tout ce que l’agent peut voir, à toute profondeur, élagué **avant** constitution. Les fiches isolées y figurent : une entité sans lien fait partie de ce que le service sait.',
+  })
+  @ApiQuery({
+    name: 'fiabilite',
+    required: false,
+    description: 'Niveau minimal des arêtes retenues, 1 à 4',
+  })
+  @ApiQuery({ name: 'dossier', required: false, format: 'uuid' })
+  @ApiResponse({ status: 200, type: VoisinageDto })
+  vueEntiere(
+    @Agent() agent: AgentCourant,
+    @Query('fiabilite', new DefaultValuePipe(1), ParseIntPipe)
+    fiabilite: number,
+    @Query('dossier') dossierId?: string,
+  ): Promise<VoisinageDto> {
+    return this.assembleur.vueEntiere(agent, {
+      fiabiliteMinimale: Math.min(Math.max(fiabilite, 1), 4),
+      dossierId,
+    });
+  }
+
   @Get('chemin')
   @SansPermission()
   @ApiOperation({
@@ -94,6 +121,9 @@ export class GrapheController {
   @Post('positions')
   @Permissions(PERMISSIONS.GRAPHE_REPOSITIONNER)
   @HttpCode(HttpStatus.NO_CONTENT)
+  // Déplacer un nœud ne touche pas à l'information d'enquête : tracer chaque
+  // glissement de souris noierait le journal, qui existe pour être relu.
+  @HorsAudit()
   @ApiOperation({
     summary: 'Disposition mémorisée',
     description:

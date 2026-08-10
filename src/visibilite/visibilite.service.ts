@@ -1,6 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Visibilite } from '@prisma/client';
 
+import { PERMISSIONS } from '../agents/permissions';
 import type { AgentCourant } from '../auth/agent-courant';
 import { PrismaService } from '../prisma/prisma.service';
 import type { ClientFiltre } from './client-filtre';
@@ -168,5 +173,28 @@ export class VisibiliteService {
   /** Décision hors base, sur des gardiens déjà résolus. */
   gardiensFranchis(agent: AgentCourant, gardiens: readonly Gardien[]): boolean {
     return contenuAccessible(this.contexte(agent), gardiens);
+  }
+
+  /**
+   * Classer un objet en restreint ou privé est une permission à part.
+   *
+   * Sans elle, tout agent pourrait soustraire une enquête au regard des autres,
+   * ce qui viderait la traçabilité de son sens : le journal enregistrerait
+   * fidèlement des consultations d'un objet que plus personne ne peut lire.
+   *
+   * La règle vit ici et non dans chaque service : entité, fait et dossier la
+   * partagent, et trois exemplaires finiraient par diverger — c'est d'ailleurs
+   * ce qui était arrivé, le contrôle n'existant que côté dossier.
+   */
+  verifierDroitDeClasser(agent: AgentCourant, visibilite: Visibilite): void {
+    if (visibilite === Visibilite.public || agent.superAdmin) {
+      return;
+    }
+
+    if (!agent.permissions.includes(PERMISSIONS.VISIBILITE_DEFINIR)) {
+      throw new ForbiddenException(
+        `permission requise : ${PERMISSIONS.VISIBILITE_DEFINIR}`,
+      );
+    }
   }
 }

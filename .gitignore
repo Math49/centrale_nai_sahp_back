@@ -9,6 +9,12 @@ coverage/
 # Versionné : il ne contient que des valeurs de test, et les tests d'intégration
 # ne tournent pas sans lui.
 !.env.test
+# Versionné aussi : que des exemples. `.env.production`, lui, porte les vrais
+# secrets et reste couvert par la règle `.env.*` ci-dessus.
+!.env.production.example
+
+# Volume de fichiers en développement : des images d'enquête, jamais du code.
+donnees/
 
 npm-debug.log*
 .DS_Store

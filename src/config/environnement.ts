@@ -40,8 +40,62 @@ export const schemaEnvironnement = z.object({
     .string()
     .min(32, 'au moins 32 caractères — ce secret ouvre tous les comptes'),
 
-  /** Durée de validité d'un jeton, au format accepté par @nestjs/jwt. */
-  JWT_DUREE: z.string().default('12h'),
+  /**
+   * Durée de validité d'un jeton, au format accepté par @nestjs/jwt.
+   *
+   * Elle vaut aussi celle du cookie qui le porte : les deux péremptions doivent
+   * coïncider, sans quoi le navigateur enverrait un cookie que l'API refuse, ou
+   * l'inverse.
+   */
+  JWT_DUREE: z.string().default('7d'),
+
+  /**
+   * Cookie `Secure` — le navigateur ne le renvoie alors que sur HTTPS.
+   *
+   * Faux en développement, où l'on sert en clair sur localhost ; **vrai en
+   * production**, où le proxy TLS est la seule porte d'entrée.
+   */
+  COOKIE_SECURE: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((valeur) => valeur === 'true'),
+
+  /**
+   * Domaine du cookie. Vide en développement — le navigateur retient alors
+   * l'hôte exact, ce qui est le comportement voulu sur localhost.
+   */
+  COOKIE_DOMAINE: z.string().optional(),
+
+  /**
+   * Délai au-delà duquel un fait « à confirmer » non revu remonte en signal.
+   *
+   * La conception technique laisse la valeur initiale à fixer à l'usage : trente
+   * jours est un point de départ, pas une vérité. Le paramètre existe pour être
+   * ajusté quand le service aura de quoi juger.
+   */
+  VIEILLISSEMENT_JOURS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(3650)
+    .default(30),
+
+  /**
+   * Racine du volume de fichiers.
+   *
+   * Jamais exposée par le reverse proxy : aucun dossier n'est servi en
+   * statique, un contrôleur vérifie les droits avant de renvoyer l'octet.
+   */
+  FICHIERS_RACINE: z.string().min(1).default('./donnees/fichiers'),
+
+  /**
+   * Plafond de taille d'une image déposée, en mégaoctets.
+   *
+   * La conception laisse la valeur à l'implémentation : huit mégaoctets laissent
+   * passer une capture de jeu en pleine résolution sans ouvrir la porte à un
+   * dépôt qui n'en serait pas un.
+   */
+  FICHIER_TAILLE_MAX_MO: z.coerce.number().int().positive().max(64).default(8),
 });
 
 export type Environnement = z.infer<typeof schemaEnvironnement>;

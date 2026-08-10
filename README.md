@@ -82,6 +82,24 @@ sont reliés par aucun fait**, et le rapprochement doit tomber seul par le graph
 (lot 9). La commande refuse de s'exécuter sur une base qui contient déjà des
 entités.
 
+```bash
+npm run semences:simulation
+```
+
+Le jeu d'**usage**, par opposition au jeu de **test** ci-dessus : quatre
+organisations, une septantaine d'entités, près de trois cents faits, sept
+dossiers dont un privé, des sources allant du fichier central à la rumeur, une
+fiche archivée et un fait infirmé. C'est celui qui sert à juger un écran, une
+recherche, un graphe — le parcours Madrina est trop court pour cela.
+
+> **Après tout peuplement, redémarrer l'API.** La commande écrit en base depuis
+> un autre processus : le graphe en mémoire de l'API ne l'apprend pas, et
+> resterait vide.
+>
+> ```bash
+> docker compose -f docker-compose.dev.yml restart api
+> ```
+
 ### Variante — base en conteneur, API sur l'hôte
 
 Plus confortable pour déboguer :
@@ -175,12 +193,107 @@ Le processus refuse de démarrer si l'une manque ou est mal formée.
 | `CORS_ORIGINES` | `http://localhost:3001` | liste séparée par des virgules |
 | `SWAGGER_ACTIF` | `true` | expose `/documentation` |
 | `JWT_SECRET` | — | obligatoire, 32 caractères minimum |
-| `JWT_DUREE` | `12h` | durée de validité d'un jeton |
+| `JWT_DUREE` | `7d` | validité du jeton **et** du cookie qui le porte |
+| `COOKIE_SECURE` | `false` | `true` en production — cookie refusé hors HTTPS |
+| `COOKIE_DOMAINE` | — | vide en développement : le navigateur retient l'hôte exact |
+| `VIEILLISSEMENT_JOURS` | `30` | seuil du signal de vieillissement, en jours |
+| `FICHIERS_RACINE` | `./donnees/fichiers` | volume des images, jamais servi en statique |
+| `FICHIER_TAILLE_MAX_MO` | `8` | plafond d'une image déposée |
 
 Toute variable ajoutée ici doit l'être aussi dans `docker-compose.dev.yml` : le
 conteneur voit le `.env` de l'hôte par le montage, mais ses propres variables le
 supplantent, et une variable oubliée y prendrait silencieusement une valeur
 prévue pour l'hôte.
+
+---
+
+## Mise en production
+
+Quatre services et une tâche de sauvegarde : `postgres`, `api`, `front`,
+`proxy`. Le front est construit depuis le dépôt voisin, désigné par
+`CHEMIN_FRONT`.
+
+```bash
+cp .env.production.example .env.production
+# renseigner DOMAINE, les mots de passe et le secret JWT, puis :
+docker compose --env-file .env.production up -d --build
+```
+
+Le DNS doit pointer sur la machine **avant** le premier démarrage : Caddy
+obtient son certificat Let's Encrypt tout seul, et échouera sinon.
+
+Puis, une seule fois :
+
+```bash
+docker compose --env-file .env.production exec api \
+  npx ts-node -r tsconfig-paths/register src/commandes/creer-super-admin.ts 2291 Prénom Nom
+docker compose --env-file .env.production exec api npm run referentiel:initial
+```
+
+**Instance unique, et c'est structurel.** Le graphe vit en mémoire dans le
+processus Nest. Toute mise à l'échelle horizontale exigerait de sortir le cache
+dans un Redis partagé — hors périmètre de la V1.
+
+### Ce que le proxy ne fait pas
+
+Il ne sert **aucun dossier en statique**. Le volume de fichiers n'apparaît nulle
+part dans le `Caddyfile` : les images passent par `/api/fichiers/:id`, qui
+vérifie l'accès à la fiche avant de renvoyer l'octet. Un `file_server` sur ce
+volume annulerait le moteur de visibilité d'un seul trait.
+
+### Fichiers
+
+- **Nom opaque** sur le volume, réparti en sous-dossiers. Le nom d'origine ne
+  vit qu'en base, pour l'affichage.
+- **Type vérifié sur le contenu**, jamais sur l'extension. JPEG, PNG et WebP.
+- **Métadonnées retirées** — EXIF, GPS, commentaires — **sans réencodage** : on
+  écarte des segments, on ne recompresse pas. Une pièce d'enquête ne doit pas
+  ressortir dégradée du dépôt.
+- Le résultat est **relu** avant d'atteindre le volume : un nettoyage qui aurait
+  échoué fait refuser le dépôt.
+
+---
+
+## Sauvegardes et restauration
+
+Le service `sauvegarde` écrit chaque nuit une paire d'archives portant le même
+horodatage : le dump de la base **et** le volume de fichiers. Les deux vont
+ensemble — une base restaurée sans ses images est une base à moitié perdue, et
+aucune source ne permet de réimporter les photos versées.
+
+```bash
+# à la demande
+docker compose --env-file .env.production exec sauvegarde \
+  /bin/sh /usr/local/bin/sauvegarder.sh maintenant
+
+# lister ce qui existe
+docker compose --env-file .env.production exec sauvegarde ls -1 /sauvegardes
+```
+
+Rotation à `RETENTION_JOURS` (14 par défaut). Les archives ne prennent leur nom
+définitif qu'une fois écrites : une sauvegarde interrompue ne peut pas se faire
+passer pour complète ni être retenue au détriment d'une bonne.
+
+### Restauration — à répéter avant la mise en service
+
+**Une sauvegarde jamais restaurée n'est pas une sauvegarde.** La procédure se
+répète au moins une fois, sur une instance de test, avant l'ouverture du
+service.
+
+```bash
+docker compose --env-file .env.production stop api front
+
+docker compose --env-file .env.production run --rm \
+  -v centrale-ni_fichiers:/cible/fichiers \
+  sauvegarde /bin/sh /usr/local/bin/restaurer.sh 20260809T030000Z
+
+docker compose --env-file .env.production start api front
+```
+
+Le script **refuse d'écraser une base non vide** sans `FORCER=1`, et vérifie en
+fin de course que le nombre d'images sur le volume correspond au nombre de
+lignes de la table `fichier`. Un écart fait échouer la restauration plutôt que
+de laisser une instance à moitié cohérente.
 
 ---
 
@@ -195,16 +308,42 @@ scripts/
   creer-migration-sql.mjs
   generer-openapi.mjs
   preparer-base-de-test.mjs
+deploiement/
+  Caddyfile              proxy TLS — ne sert aucun dossier en statique
+  sauvegarder.sh         base et volume, rotation
+  restaurer.sh           procédure de restauration, vérifiée
 src/
   agents/                comptes, grades, catalogue des permissions
   auth/                  connexion, jetons, gardes globaux
   commandes/             amorçage d'une instance
   config/                validation de l'environnement
-  journal/               écriture d'audit
+  dossiers/              périmètres d'enquête, suivi, habilitations
+  entites/               annuaire, fiche, doublons, fusion
+  faits/                 création, correction, infirmation
+  fichiers/              dépôt, nettoyage des métadonnées, service authentifié
+  graphe/                cache mémoire, voisinage, chemins, récurrences
+  journal/               consultation, audit, intercepteur
   prisma/                client partagé
+  referentiel/           types d'entités, champs, types de liens, onglets
   sante/                 route de santé
+  semences/              parcours Madrina
+  signaux/               signaux de l'accueil, recherche globale
+  visibilite/            règle des gardiens — un seul exemplaire
 test/                    tests d'intégration
 ```
+
+---
+
+## Recette d'ensemble
+
+`test/recette-madrina.e2e-spec.ts` rejoue **par l'API**, sur une base vierge et
+par un compte Junior, tout le parcours de l'annexe B. Il vérifie ensuite le
+critère de réussite du projet :
+
+> Aucun fait ne relie Isadora Morales à Tyron Banks — et pourtant le graphe les
+> relie, et le signal de récurrence la fait ressortir seule.
+
+C'est le test à faire tourner avant toute mise en production.
 
 **Refus par défaut.** Une route qui ne déclare ni `@Publique()`, ni
 `@SansPermission()`, ni `@Permissions(...)` est refusée. Un test d'intégration

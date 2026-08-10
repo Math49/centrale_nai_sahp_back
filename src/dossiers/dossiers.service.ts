@@ -1,12 +1,10 @@
 import {
   ConflictException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma, Visibilite, type Dossier } from '@prisma/client';
 
-import { PERMISSIONS } from '../agents/permissions';
 import type { AgentCourant } from '../auth/agent-courant';
 import { JournalAuditService } from '../journal/journal-audit.service';
 import { BusInvalidation } from '../graphe/bus-invalidation';
@@ -424,19 +422,11 @@ export class DossiersService {
   /**
    * Classer un objet en restreint ou privé est une permission à part.
    *
-   * Sans elle, tout agent pourrait soustraire une enquête au regard des
-   * autres, ce qui viderait la traçabilité de son sens.
+   * La règle vit dans `VisibiliteService`, avec toutes les autres décisions de
+   * visibilité ; ce relais existe pour les appelants historiques.
    */
   verifierDroitDeClasser(agent: AgentCourant, visibilite: Visibilite): void {
-    if (visibilite === Visibilite.public || agent.superAdmin) {
-      return;
-    }
-
-    if (!agent.permissions.includes(PERMISSIONS.VISIBILITE_DEFINIR)) {
-      throw new ForbiddenException(
-        `permission requise : ${PERMISSIONS.VISIBILITE_DEFINIR}`,
-      );
-    }
+    this.visibilite.verifierDroitDeClasser(agent, visibilite);
   }
 
   private async compterSuivis(

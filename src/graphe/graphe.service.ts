@@ -167,6 +167,56 @@ export class GrapheService {
   }
 
   /**
+   * **La vue entière**, élaguée pour cet agent.
+   *
+   * Tous les nœuds qu'il peut voir, toutes les arêtes qu'il peut franchir, sans
+   * point de départ ni profondeur : l'écran de graphe charge l'ensemble et
+   * laisse l'agent naviguer dedans, plutôt que de le faire déplier saut par
+   * saut.
+   *
+   * L'élagage reste **avant** constitution, comme partout ailleurs : ce qui
+   * n'est pas franchissable n'entre pas dans la vue, il n'en est pas retiré
+   * après coup.
+   *
+   * Un nœud isolé y figure : une fiche sans lien fait partie de ce que le
+   * service sait, et la masquer laisserait croire qu'elle n'existe pas.
+   */
+  async vueEntiere(
+    agent: AgentCourant,
+    fiabiliteMinimale: number,
+  ): Promise<{
+    noeuds: (Noeud & { voisinsNonAffiches: number; recurrence: boolean })[];
+    aretes: Arete[];
+  }> {
+    const vue = await this.elaguer(agent);
+    const recurrences = await this.recurrences(agent);
+
+    const aretes = new Map<string, Arete>();
+
+    for (const arete of vue.graphe.aretesParFait.values()) {
+      if (
+        arete.fiabilite >= fiabiliteMinimale &&
+        vue.areteFranchissable(arete) &&
+        vue.noeudVisible(arete.sujetId) &&
+        vue.noeudVisible(arete.cibleId)
+      ) {
+        aretes.set(arete.faitId, arete);
+      }
+    }
+
+    const noeuds = [...vue.graphe.noeuds.keys()]
+      .filter((id) => vue.noeudVisible(id))
+      .map((id) => ({
+        ...vue.graphe.noeuds.get(id)!,
+        // Tout est affiché : il ne reste rien à déplier.
+        voisinsNonAffiches: 0,
+        recurrence: recurrences.has(id),
+      }));
+
+    return { noeuds, aretes: [...aretes.values()] };
+  }
+
+  /**
    * Deux chemins, présentés côte à côte : le plus court et le plus solide.
    *
    * Le plus solide maximise le minimum de fiabilité le long du trajet — c'est
@@ -363,6 +413,35 @@ export class GrapheService {
     }
 
     return trouvees;
+  }
+
+  /**
+   * Voisins immédiats de chacune de ces entités, sur la vue élaguée.
+   *
+   * Un seul élagage pour toute la question, là où enchaîner des recherches de
+   * chemin en referait un par appel. Sert au signal de recoupement, qui se tait
+   * quand les pivots concernés sont déjà reliés.
+   */
+  async voisinsDirects(
+    agent: AgentCourant,
+    ids: readonly string[],
+  ): Promise<Map<string, Set<string>>> {
+    const vue = await this.elaguer(agent);
+    const voisinages = new Map<string, Set<string>>();
+
+    for (const id of ids) {
+      if (!vue.noeudVisible(id)) {
+        voisinages.set(id, new Set());
+        continue;
+      }
+
+      voisinages.set(
+        id,
+        new Set(vue.voisins(id).map((arete) => this.autreBout(arete, id))),
+      );
+    }
+
+    return voisinages;
   }
 
   /** Libellés des nœuds, pour les écrans qui n'ont que des identifiants. */

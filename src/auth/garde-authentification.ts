@@ -13,6 +13,7 @@ import type { Permission } from '../agents/permissions';
 import type { Environnement } from '../config/environnement';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AgentCourant, RequeteAuthentifiee } from './agent-courant';
+import { COOKIE_SESSION } from './cookie-session';
 import { CLE_MOT_DE_PASSE_A_CHANGER, CLE_PUBLIQUE } from './decorateurs';
 
 export interface ContenuJeton {
@@ -37,7 +38,7 @@ export class GardeAuthentification implements CanActivate {
     }
 
     const requete = contexte.switchToHttp().getRequest<RequeteAuthentifiee>();
-    const jeton = this.extraireJeton(requete.headers.authorization);
+    const jeton = this.jetonDeLaRequete(requete);
 
     if (!jeton) {
       throw new UnauthorizedException('jeton absent');
@@ -75,8 +76,23 @@ export class GardeAuthentification implements CanActivate {
     );
   }
 
-  private extraireJeton(entete: string | undefined): string | undefined {
-    const [schema, valeur] = entete?.split(' ') ?? [];
+  /**
+   * Le jeton, pris **d'abord dans le cookie**, à défaut dans l'en-tête.
+   *
+   * Le cookie `httpOnly` est le mode normal : le navigateur l'envoie seul, et
+   * aucun script de la page ne peut le lire. L'en-tête `Authorization` reste
+   * accepté pour ce qui n'est pas un navigateur — les tests d'intégration, la
+   * documentation Swagger, un appel en ligne de commande.
+   */
+  private jetonDeLaRequete(requete: RequeteAuthentifiee): string | undefined {
+    const cookies = requete.cookies as Record<string, string> | undefined;
+    const duCookie = cookies?.[COOKIE_SESSION];
+
+    if (duCookie) {
+      return duCookie;
+    }
+
+    const [schema, valeur] = requete.headers.authorization?.split(' ') ?? [];
     return schema === 'Bearer' && valeur ? valeur : undefined;
   }
 
