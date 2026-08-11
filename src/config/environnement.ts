@@ -7,13 +7,13 @@ export const schemaEnvironnement = z.object({
     .enum(['development', 'test', 'production'])
     .default('development'),
 
-  PORT: z.coerce.number().int().positive().max(65535).default(3000),
+  PORT: z.coerce.number().int().positive().max(65535).default(40511),
 
   DATABASE_URL: z.string().url(),
 
   CORS_ORIGINES: z
     .string()
-    .default('http://localhost:3001')
+    .default('http://localhost:40510')
     .transform((valeur) =>
       valeur
         .split(',')

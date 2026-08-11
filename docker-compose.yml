@@ -10,6 +10,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - donnees_postgres:/var/lib/postgresql/data
+    ports:
+      - '127.0.0.1:${POSTGRES_PORT:-40512}:5432'
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
       interval: 10s
@@ -27,7 +29,7 @@ services:
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:?renseigner PGADMIN_PASSWORD}
       PGADMIN_CONFIG_SERVER_MODE: 'True'
     ports:
-      - '127.0.0.1:${PGADMIN_PORT:-5050}:80'
+      - '127.0.0.1:${PGADMIN_PORT:-40513}:80'
     volumes:
       - pgadmin_donnees:/var/lib/pgadmin
 
@@ -39,7 +41,7 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
-      PORT: '3000'
+      PORT: '40511'
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
       CORS_ORIGINES: https://${DOMAINE}
       SWAGGER_ACTIF: 'false'
@@ -54,6 +56,8 @@ services:
       VIEILLISSEMENT_JOURS: ${VIEILLISSEMENT_JOURS:-30}
       FICHIERS_RACINE: /app/donnees/fichiers
       FICHIER_TAILLE_MAX_MO: ${FICHIER_TAILLE_MAX_MO:-8}
+    ports:
+      - '127.0.0.1:${API_PORT:-40511}:40511'
     volumes:
       - fichiers:/app/donnees/fichiers
     healthcheck:
@@ -62,7 +66,7 @@ services:
           'CMD',
           'node',
           '-e',
-          "fetch('http://127.0.0.1:3000/sante').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+          "fetch('http://127.0.0.1:40511/sante').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
         ]
       interval: 30s
       timeout: 5s
@@ -74,22 +78,8 @@ services:
     restart: unless-stopped
     depends_on:
       - api
-
-  proxy:
-    image: caddy:2-alpine
-    restart: unless-stopped
-    depends_on:
-      - api
-      - front
     ports:
-      - '80:80'
-      - '443:443'
-    environment:
-      DOMAINE: ${DOMAINE}
-    volumes:
-      - ./deploiement/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_donnees:/data
-      - caddy_configuration:/config
+      - '127.0.0.1:${FRONT_PORT:-40510}:40510'
 
   sauvegarde:
     image: postgres:17-alpine
@@ -116,5 +106,3 @@ volumes:
   pgadmin_donnees:
   fichiers:
   sauvegardes:
-  caddy_donnees:
-  caddy_configuration:

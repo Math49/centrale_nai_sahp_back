@@ -41,7 +41,7 @@ RUN mkdir -p /app/donnees/fichiers && chown -R node:node /app/donnees
 
 USER node
 
-EXPOSE 3000
+EXPOSE 40511
 
 
 CMD ["sh", "-c", "npx prisma migrate deploy && node dist/commandes/initialiser-production && node dist/main"]

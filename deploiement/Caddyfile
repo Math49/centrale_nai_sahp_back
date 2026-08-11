@@ -6,11 +6,11 @@
 
 
 	handle_path /api/* {
-		reverse_proxy api:3000
+		reverse_proxy api:40511
 	}
 
 	handle {
-		reverse_proxy front:3001
+		reverse_proxy front:40510
 	}
 
 	header {

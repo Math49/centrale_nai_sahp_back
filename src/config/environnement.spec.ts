@@ -1,7 +1,7 @@
 import { validerEnvironnement } from './environnement';
 
 const minimal = {
-  DATABASE_URL: 'postgresql://ni:ni@localhost:5432/centrale_ni',
+  DATABASE_URL: 'postgresql://ni:ni@localhost:40512/centrale_ni',
   JWT_SECRET: 'secret-de-test-assez-long-pour-passer-le-seuil',
 };
 
@@ -10,8 +10,8 @@ describe('validerEnvironnement', () => {
     const environnement = validerEnvironnement({ ...minimal });
 
     expect(environnement.NODE_ENV).toBe('development');
-    expect(environnement.PORT).toBe(3000);
-    expect(environnement.CORS_ORIGINES).toEqual(['http://localhost:3001']);
+    expect(environnement.PORT).toBe(40511);
+    expect(environnement.CORS_ORIGINES).toEqual(['http://localhost:40510']);
     expect(environnement.SWAGGER_ACTIF).toBe(true);
     expect(environnement.SUPER_ADMIN_MATRICULE).toBeUndefined();
     expect(environnement.SUPER_ADMIN_GRADE).toBe('etat_major');
@@ -54,11 +54,11 @@ describe('validerEnvironnement', () => {
   it('découpe CORS_ORIGINES sur les virgules', () => {
     const environnement = validerEnvironnement({
       ...minimal,
-      CORS_ORIGINES: 'http://localhost:3001, https://ni.example ,',
+      CORS_ORIGINES: 'http://localhost:40510, https://ni.example ,',
     });
 
     expect(environnement.CORS_ORIGINES).toEqual([
-      'http://localhost:3001',
+      'http://localhost:40510',
       'https://ni.example',
     ]);
   });

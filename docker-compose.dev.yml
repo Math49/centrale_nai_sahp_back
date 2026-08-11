@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: ni
       POSTGRES_DB: centrale_ni
     ports:
-      - '5432:5432'
+      - '127.0.0.1:40512:5432'
     volumes:
       - donnees_postgres:/var/lib/postgresql/data
     healthcheck:
@@ -29,7 +29,7 @@ services:
       PGADMIN_DEFAULT_PASSWORD: admin
       PGADMIN_CONFIG_SERVER_MODE: 'False'
     ports:
-      - '5050:80'
+      - '127.0.0.1:40513:80'
     volumes:
       - pgadmin_donnees:/var/lib/pgadmin
 
@@ -45,9 +45,9 @@ services:
 
     environment:
       NODE_ENV: development
-      PORT: '3000'
+      PORT: '40511'
       DATABASE_URL: postgresql://ni:ni@postgres:5432/centrale_ni?schema=public
-      CORS_ORIGINES: http://localhost:3001
+      CORS_ORIGINES: http://localhost:40510
       SWAGGER_ACTIF: 'true'
 
 
@@ -60,7 +60,7 @@ services:
       FICHIERS_RACINE: /app/donnees/fichiers
       FICHIER_TAILLE_MAX_MO: 8
     ports:
-      - '3000:3000'
+      - '127.0.0.1:40511:40511'
     volumes:
 
 

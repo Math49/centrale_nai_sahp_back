@@ -34,8 +34,8 @@ cp .env.example .env
 docker compose -f docker-compose.dev.yml up
 ```
 
-L'API écoute sur `http://localhost:3000`, la base sur `localhost:5432`.
-pgAdmin est disponible sur `http://localhost:5050` avec
+L'API écoute sur `http://localhost:40511`, la base sur `localhost:40512`.
+pgAdmin est disponible sur `http://localhost:40513` avec
 `admin@centrale-ni.local` / `admin`. Pour y enregistrer la base :
 `postgres:5432`, base `centrale_ni`, utilisateur `ni`, mot de passe `ni`.
 Les migrations sont appliquées au démarrage du conteneur `api`.
@@ -43,14 +43,14 @@ Les migrations sont appliquées au démarrage du conteneur `api`.
 Vérification :
 
 ```bash
-curl http://localhost:3000/sante
+curl http://localhost:40511/sante
 ```
 
 ```json
 { "etat": "operationnel", "version": "0.1.0", "base": true, "demarre_depuis": 3, "horodatage": "..." }
 ```
 
-La documentation OpenAPI est servie sur `http://localhost:3000/documentation`.
+La documentation OpenAPI est servie sur `http://localhost:40511/documentation`.
 
 ### Premier compte
 
@@ -194,11 +194,11 @@ Le processus refuse de démarrer si l'une manque ou est mal formée.
 | Variable | Défaut | Rôle |
 | --- | --- | --- |
 | `NODE_ENV` | `development` | |
-| `PORT` | `3000` | |
+| `PORT` | `40511` | |
 | `API_IMAGE` | — | image Docker API tirée par Portainer |
 | `FRONT_IMAGE` | — | image Docker front tirée par Portainer |
 | `DATABASE_URL` | — | obligatoire |
-| `CORS_ORIGINES` | `http://localhost:3001` | liste séparée par des virgules |
+| `CORS_ORIGINES` | `http://localhost:40510` | liste séparée par des virgules |
 | `SWAGGER_ACTIF` | `true` | expose `/documentation` |
 | `JWT_SECRET` | — | obligatoire, 32 caractères minimum |
 | `JWT_DUREE` | `7d` | validité du jeton **et** du cookie qui le porte |
@@ -251,7 +251,7 @@ Au démarrage, le conteneur `api` applique les migrations puis crée le premier
 super-admin depuis `SUPER_ADMIN_*` si aucun super-admin actif n'existe encore.
 Aucune autre donnée de production n'est seedée automatiquement.
 
-pgAdmin écoute uniquement sur `127.0.0.1:${PGADMIN_PORT:-5050}`. Depuis une
+pgAdmin écoute uniquement sur `127.0.0.1:${PGADMIN_PORT:-40513}`. Depuis une
 machine distante, ouvrir un tunnel SSH vers ce port. Dans pgAdmin, la base se
 joint par `postgres:5432` avec les valeurs `POSTGRES_USER`, `POSTGRES_PASSWORD`
 et `POSTGRES_DB` du fichier `.env.production`.
