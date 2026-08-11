@@ -90,13 +90,6 @@ export class RolesService {
     return this.presenter(apres);
   }
 
-  /**
-   * Crée les grades manquants avec leur répartition initiale de permissions.
-   *
-   * **Ne touche jamais à un grade existant** : ses permissions ont pu être
-   * reconfigurées depuis, et les réécrire au démarrage annulerait silencieusement
-   * la configuration de l'administration.
-   */
   async initialiserLesGradesManquants(): Promise<string[]> {
     const existants = await this.prisma.role.findMany({
       select: { code: true },

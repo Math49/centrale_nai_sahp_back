@@ -15,7 +15,6 @@ import type { CreationAgentDto, ModificationAgentDto } from './agents.dto';
 
 type AgentAvecRole = Agent & { role: Role };
 
-/** Affichage d'un compte anonymisé, identique partout dans l'application. */
 export const LIBELLE_AGENT_ANONYMISE = 'agent supprimé';
 
 @Injectable()
@@ -40,8 +39,6 @@ export class AgentsService {
     return this.presenter(await this.charger(id));
   }
 
-  /** `auteurId` est nul lorsque la création vient de la commande d'amorçage :
-   *  il n'existe alors aucun compte pour en être l'auteur. */
   async creer(
     auteurId: string | null,
     donnees: CreationAgentDto,
@@ -54,7 +51,6 @@ export class AgentsService {
       throw new BadRequestException('grade inconnu');
     }
 
-    // Sans mot de passe fourni, on en engendre un, affiché une seule fois.
     const provisoire = donnees.motDePasse
       ? null
       : this.motsDePasse.engendrerProvisoire();
@@ -71,16 +67,12 @@ export class AgentsService {
             motDePasseHash: await this.motsDePasse.hacher(
               donnees.motDePasse ?? provisoire!,
             ),
-            // Imposé quelle que soit l'origine du mot de passe : celui qui
-            // crée le compte connaît forcément le secret initial.
+
             doitChangerMdp: true,
           },
           include: { role: true },
         });
 
-        // Le journal désigne le compte par son id, jamais par son matricule
-        // ni son nom : une trace qui recopierait ces valeurs les rendrait
-        // relisibles après une anonymisation, qui perdrait alors son sens.
         await this.audit.tracer(
           {
             agentId: auteurId,
@@ -136,7 +128,6 @@ export class AgentsService {
       }
     }
 
-    // Un compte désactivé ne doit pas conserver de session ouverte.
     const revoquerLesJetons = donnees.actif === false && avant.actif;
 
     const apres = await this.prisma.$transaction(async (transaction) => {
@@ -175,10 +166,6 @@ export class AgentsService {
     return this.presenter(apres);
   }
 
-  /**
-   * Réinitialise le mot de passe et renvoie le provisoire, affiché une fois.
-   * Le compte repasse en changement imposé et ses jetons sont révoqués.
-   */
   async reinitialiserMotDePasse(
     auteurId: string,
     id: string,
@@ -221,15 +208,6 @@ export class AgentsService {
     };
   }
 
-  /**
-   * Anonymisation — seule forme de retrait d'un compte.
-   *
-   * Efface les données personnelles, conserve l'enregistrement et toutes les
-   * clés étrangères qui le désignent, réécrit le matricule en valeur technique
-   * dérivée de l'id — jamais NULL, la colonne est unique — afin de libérer le
-   * matricule d'origine pour un futur agent, et incrémente `token_version`,
-   * ce qui invalide immédiatement les jetons émis.
-   */
   async anonymiser(auteurId: string, id: string): Promise<AgentDto> {
     const agent = await this.charger(id);
 
@@ -261,9 +239,6 @@ export class AgentsService {
         include: { role: true },
       });
 
-      // L'audit ne recopie surtout pas les valeurs effacées : les reporter
-      // dans `avant` reconstituerait en clair ce que l'anonymisation vient de
-      // retirer. Seuls le geste, sa cible et son auteur sont tracés.
       await this.audit.tracer(
         {
           agentId: auteurId,
@@ -294,13 +269,6 @@ export class AgentsService {
     return agent;
   }
 
-  /**
-   * Empêche de retirer le dernier super-admin actif.
-   *
-   * Sans ce garde-fou, une instance peut se retrouver sans personne capable de
-   * reconfigurer les grades ni de créer un compte — un état dont on ne sort
-   * qu'en base.
-   */
   private async refuserSiDernierSuperAdmin(agent: Agent): Promise<void> {
     if (!agent.superAdmin || !agent.actif) {
       return;

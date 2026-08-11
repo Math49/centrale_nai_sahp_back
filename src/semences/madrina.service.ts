@@ -8,16 +8,6 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ReferentielService } from '../referentiel/referentiel.service';
 import { TYPES_ENTITES, TYPES_LIENS } from '../commandes/referentiel-madrina';
 
-/**
- * Jeu de données de développement : le parcours Madrina.
- *
- * C'est le test de non-régression du modèle, et le critère de réussite du
- * projet — Isadora Morales doit ressortir sans qu'aucun agent n'ait tracé de
- * lien entre elle et Tyron Banks. Il sert donc à la fois de données de travail
- * et de scénario de recette, jusqu'à celle d'ensemble du lot 12.
- */
-
-/** Les sources du parcours, avec leur fiabilité et leur date de constatation. */
 const SOURCES = {
   informateur: {
     source: 'Informateur — installation d’un nouveau groupe',
@@ -47,11 +37,10 @@ const SOURCES = {
 } as const;
 
 export interface ReferentielInstalle {
-  /** Identifiant de type d'entité, par code. */
   types: Record<string, string>;
-  /** Identifiant de champ, par « code_type.cle ». */
+
   champs: Record<string, string>;
-  /** Identifiant de type de lien, par code. */
+
   liens: Record<string, string>;
 }
 
@@ -66,7 +55,6 @@ export class MadrinaService {
     private readonly faits: FaitsService,
   ) {}
 
-  /** Installe types, champs, types de liens et onglets. Idempotent. */
   async installerReferentiel(auteurId: string): Promise<ReferentielInstalle> {
     const deja = await this.prisma.typeEntite.count();
 
@@ -136,20 +124,10 @@ export class MadrinaService {
     return this.relever();
   }
 
-  /**
-   * Rejoue le parcours de l'annexe B.
-   *
-   * L'ordre de création est contraint : une entité doit exister avant qu'un
-   * lien ne la désigne. C'est la même contrainte que celle de la création en
-   * cascade côté front, où l'entité créée est persistée avant le lien.
-   */
   async peuplerParcours(auteurId: string): Promise<Record<string, string>> {
     const { types, champs, liens } = await this.relever();
     const entites: Record<string, string> = {};
 
-    // Les services d'écriture prennent l'agent courant, pas son identifiant :
-    // ils contrôlent la visibilité de ce qu'ils touchent. On le reconstitue
-    // depuis le compte, comme le ferait le garde d'authentification.
     const auteur = await this.resoudreAuteur(auteurId);
 
     const champ = (cle: string, valeur: string | number | boolean) => ({
@@ -157,7 +135,6 @@ export class MadrinaService {
       valeur,
     });
 
-    // 1 — le groupe, point de départ de l'enquête
     const madrina = await this.entites.creer(auteur, {
       typeEntiteId: types.groupe,
       ...SOURCES.informateur,
@@ -169,7 +146,6 @@ export class MadrinaService {
     });
     entites.madrina = madrina.id;
 
-    // 2 — le QG relevé lors de la planque
     const villa = await this.entites.creer(auteur, {
       typeEntiteId: types.lieu,
       ...SOURCES.planque,
@@ -181,7 +157,6 @@ export class MadrinaService {
     });
     entites.villa = villa.id;
 
-    // 3 — une plaque relevée devant la villa
     const komoda = await this.entites.creer(auteur, {
       typeEntiteId: types.vehicule,
       ...SOURCES.planque,
@@ -194,7 +169,6 @@ export class MadrinaService {
     });
     entites.komoda = komoda.id;
 
-    // 4 — son propriétaire, trouvé à la centrale SAPD
     const tyron = await this.entites.creer(auteur, {
       typeEntiteId: types.personne,
       ...SOURCES.centrale,
@@ -214,7 +188,6 @@ export class MadrinaService {
     });
     entites.tyron = tyron.id;
 
-    // 5 — premier braquage
     const bijouterie = await this.entites.creer(auteur, {
       typeEntiteId: types.lieu,
       ...SOURCES.bijouterie,
@@ -237,7 +210,7 @@ export class MadrinaService {
         {
           typeLienId: liens.revendique_par,
           cibleId: madrina.id,
-          // Une revendication n'est pas une constatation.
+
           source: 'Rumeur relayée par un informateur',
           fiabilite: 2,
           dateConstatation: '2026-08-08',
@@ -246,7 +219,6 @@ export class MadrinaService {
     });
     entites.braquageBijouterie = braquageBijouterie.id;
 
-    // 6 — un véhicule présent au braquage, et sa propriétaire
     const sultan = await this.entites.creer(auteur, {
       typeEntiteId: types.vehicule,
       ...SOURCES.bijouterie,
@@ -273,7 +245,6 @@ export class MadrinaService {
     });
     entites.isadora = isadora.id;
 
-    // 7 — second braquage, un mois plus tard
     const autoroute = await this.entites.creer(auteur, {
       typeEntiteId: types.lieu,
       ...SOURCES.fourgon,
@@ -306,11 +277,6 @@ export class MadrinaService {
     });
     entites.buffalo = buffalo.id;
 
-    // 8 — les faits qui referment la boucle, saisis depuis les rapports
-    //
-    // Aucun ne relie Isadora à Tyron. Le rapprochement tombera seul, par le
-    // graphe : les véhicules d'Isadora sont présents aux deux événements où
-    // Tyron apparaît.
     await this.faits.creer(auteur, {
       sujetId: tyron.id,
       nature: 'lien',
@@ -335,9 +301,6 @@ export class MadrinaService {
       ...SOURCES.centrale,
     });
 
-    // Une seconde source confirme la couleur du Komoda : deux faits portent la
-    // même affirmation, ce qui doit produire le signal de multi-sources sans
-    // rien revaloriser automatiquement.
     await this.faits.creer(auteur, {
       sujetId: komoda.id,
       nature: 'champ',
@@ -353,7 +316,6 @@ export class MadrinaService {
     return entites;
   }
 
-  /** Reconstitue l'agent courant depuis son compte, comme le fait le garde. */
   private async resoudreAuteur(id: string): Promise<AgentCourant> {
     const agent = await this.prisma.sansFiltre.agent.findUniqueOrThrow({
       where: { id },

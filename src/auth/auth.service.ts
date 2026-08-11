@@ -33,9 +33,6 @@ export class AuthService {
       motDePasse,
     );
 
-    // Message unique, quelle que soit la cause : matricule inconnu, mot de
-    // passe faux, compte désactivé ou anonymisé. Distinguer ces cas
-    // renseignerait un attaquant sur l'existence des comptes.
     if (!agent || !correspond || !agent.actif || agent.anonymise) {
       throw new UnauthorizedException('identifiants invalides');
     }
@@ -55,11 +52,6 @@ export class AuthService {
     };
   }
 
-  /**
-   * Change le mot de passe et **invalide tous les jetons existants**, y compris
-   * celui qui a servi à l'appel — d'où le jeton neuf renvoyé. Un mot de passe
-   * changé parce qu'il était compromis doit couper les sessions ouvertes.
-   */
   async changerMotDePasse(
     agentCourant: AgentCourant,
     ancien: string,

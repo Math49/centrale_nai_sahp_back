@@ -1,15 +1,5 @@
--- Migration générée depuis prisma/sql/ par scripts/creer-migration-sql.mjs.
--- Ne pas modifier ici : corriger le fichier source puis créer une nouvelle migration.
 
--- source : prisma/sql/fonctions/texte_de_json.sql
--- Rend lisible une valeur de fait, quel que soit son type de donnée.
---
--- Les valeurs de champs sont stockées en jsonb : une chaîne, un nombre, un
--- booléen, ou un tableau pour les champs multiples. Le gabarit de libellé et la
--- clé d'unicité ont besoin d'un texte.
---
--- En PL/pgSQL et non en SQL : la fonction s'appelle elle-même pour les
--- tableaux, et une fonction SQL ne peut pas se référencer avant d'exister.
+
 
 CREATE OR REPLACE FUNCTION texte_de_json(p_valeur jsonb)
 RETURNS text AS $$
@@ -25,40 +15,17 @@ BEGIN
     );
   END IF;
 
-  -- #>> '{}' déballe une chaîne sans ses guillemets, et rend les autres
-  -- scalaires sous leur forme textuelle.
+
   RETURN p_valeur #>> '{}';
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 
--- source : prisma/sql/fonctions/normaliser_valeur.sql
--- Clé de comparaison des valeurs uniques.
---
--- Sans normalisation, « 20DCC874 », « 20dcc874 » et « Moralès » contre
--- « Morales » passeraient pour des valeurs distinctes, et la plaque en double
--- que l'unicité doit refuser passerait au travers.
---
--- La forme `unaccent(regdictionary, text)` est IMMUTABLE, contrairement à
--- `unaccent(text)` : c'est elle qui permet d'utiliser la fonction dans un index.
 
 CREATE OR REPLACE FUNCTION normaliser_valeur(p_valeur text)
 RETURNS text AS $$
   SELECT lower(unaccent('unaccent'::regdictionary, btrim(p_valeur)));
 $$ LANGUAGE sql IMMUTABLE;
 
--- source : prisma/sql/fonctions/projeter_entite.sql
--- Projection des faits sur l'entité : `entite.valeurs` et `entite.libelle`.
---
--- La vérité est dans `fait`. Cette fonction en maintient une vue matérialisée,
--- pour que la fiche s'affiche en une requête et que la cohérence soit garantie
--- par la base plutôt que par la discipline de l'application.
---
--- Choix de projection :
---   · champ multiple  → tableau de toutes les valeurs actives
---   · champ simple    → la valeur du fait le plus fiable, puis le plus récent
---
--- Deux faits peuvent porter la même affirmation depuis deux sources : c'est
--- normal, et c'est le meilleur des deux qui l'emporte à l'affichage.
 
 CREATE OR REPLACE FUNCTION projeter_entite(p_entite_id uuid)
 RETURNS void AS $$
@@ -110,8 +77,7 @@ BEGIN
     );
   END LOOP;
 
-  -- Un champ non renseigné laisse un trou ; on resserre les espaces plutôt que
-  -- d'afficher « Tyron   » ou «  Banks ».
+
   v_libelle := btrim(regexp_replace(v_libelle, '\s+', ' ', 'g'));
 
   IF v_libelle = '' THEN
@@ -125,16 +91,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- source : prisma/sql/fonctions/recalculer_valeurs_uniques.sql
--- Maintien de `valeur_unique` pour les champs marqués uniques.
---
--- La table porte une entrée par (type d'entité, champ, valeur normalisée), et
--- sa clé primaire est ce qui refuse deux plaques identiques sur deux véhicules
--- distincts.
---
--- Une entrée par *entité* et non par *fait* : deux faits peuvent affirmer la
--- même plaque depuis deux sources, ce qui est normal et ne doit pas déclencher
--- un conflit avec soi-même. D'où le DISTINCT.
 
 CREATE OR REPLACE FUNCTION recalculer_valeurs_uniques(p_entite_id uuid)
 RETURNS void AS $$
@@ -143,9 +99,7 @@ DECLARE
 BEGIN
   DELETE FROM valeur_unique WHERE entite_id = p_entite_id;
 
-  -- Vérification avant insertion, uniquement pour produire un message qui
-  -- nomme le champ et la valeur en cause. La clé primaire refuserait de toute
-  -- façon, mais sans dire laquelle des valeurs est déjà prise.
+
   FOR v_conflit IN
     SELECT DISTINCT dc.libelle AS champ,
                     texte_de_json(f.valeur) AS valeur
@@ -182,13 +136,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- source : prisma/sql/triggers/coeur.sql
--- Triggers de cohérence du cœur.
---
--- Frontière retenue : la base garantit que la donnée ne peut pas devenir
--- incohérente, l'application décide qui a le droit de la voir.
-
--- ─── Projection des faits sur l'entité, et recalcul du libellé ───
 
 CREATE OR REPLACE FUNCTION fait_projection()
 RETURNS trigger AS $$
@@ -200,7 +147,7 @@ BEGIN
 
   PERFORM projeter_entite(NEW.sujet_id);
 
-  -- Un fait qui change de sujet laisse deux fiches à recalculer.
+
   IF TG_OP = 'UPDATE' AND OLD.sujet_id IS DISTINCT FROM NEW.sujet_id THEN
     PERFORM projeter_entite(OLD.sujet_id);
   END IF;
@@ -214,7 +161,6 @@ CREATE TRIGGER trg_fait_projection
 AFTER INSERT OR UPDATE OR DELETE ON fait
 FOR EACH ROW EXECUTE FUNCTION fait_projection();
 
--- ─── Unicité des champs marqués uniques ───
 
 CREATE OR REPLACE FUNCTION fait_unicite()
 RETURNS trigger AS $$
@@ -239,11 +185,6 @@ CREATE TRIGGER trg_fait_unicite
 AFTER INSERT OR UPDATE OR DELETE ON fait
 FOR EACH ROW EXECUTE FUNCTION fait_unicite();
 
--- ─── Reprojection après changement de gabarit ───
---
--- Sans cela, modifier « {plaque} » en « {plaque} {modele} » depuis
--- l'administration laisserait tous les libellés déjà calculés dans leur ancien
--- état, sans qu'aucun écran ne le signale.
 
 CREATE OR REPLACE FUNCTION type_entite_reprojection()
 RETURNS trigger AS $$
@@ -267,7 +208,6 @@ CREATE TRIGGER trg_type_entite_reprojection
 AFTER UPDATE OF modele_libelle ON type_entite
 FOR EACH ROW EXECUTE FUNCTION type_entite_reprojection();
 
--- ─── Horodatage ───
 
 CREATE OR REPLACE FUNCTION horodater()
 RETURNS trigger AS $$
@@ -287,10 +227,7 @@ CREATE TRIGGER trg_fait_horodatage
 BEFORE UPDATE ON fait
 FOR EACH ROW EXECUTE FUNCTION horodater();
 
--- source : prisma/sql/contraintes/fait.sql
--- Contraintes de cohérence du fait, inexprimables dans schema.prisma.
 
--- Un fait est un champ ou un lien, jamais les deux, jamais ni l'un ni l'autre.
 ALTER TABLE fait DROP CONSTRAINT IF EXISTS fait_coherence;
 ALTER TABLE fait ADD CONSTRAINT fait_coherence CHECK (
   (nature = 'champ'
@@ -305,25 +242,18 @@ ALTER TABLE fait ADD CONSTRAINT fait_coherence CHECK (
      AND valeur IS NULL)
 );
 
--- Quatre niveaux ordonnés : 1 douteux, 2 à confirmer, 3 probable, 4 certain.
+
 ALTER TABLE fait DROP CONSTRAINT IF EXISTS fait_fiabilite;
 ALTER TABLE fait ADD CONSTRAINT fait_fiabilite CHECK (fiabilite BETWEEN 1 AND 4);
 
--- Invariant : aucun fait sans source. `NOT NULL` ne suffit pas, une chaîne
--- vide en tiendrait lieu.
+
 ALTER TABLE fait DROP CONSTRAINT IF EXISTS fait_source_non_vide;
 ALTER TABLE fait ADD CONSTRAINT fait_source_non_vide CHECK (btrim(source) <> '');
 
--- Un lien vers soi-même n'apporte rien et fausserait le graphe.
+
 ALTER TABLE fait DROP CONSTRAINT IF EXISTS fait_pas_de_boucle;
 ALTER TABLE fait ADD CONSTRAINT fait_pas_de_boucle CHECK (cible_id IS NULL OR cible_id <> sujet_id);
 
--- source : prisma/sql/index/coeur.sql
--- Index du cœur.
---
--- Les deux premiers sont les plus importants de l'application : ils servent
--- chaque fiche et chaque chargement du graphe. Partiels sur `etat = 'actif'`,
--- ce que `@@index` ne sait pas exprimer.
 
 CREATE INDEX IF NOT EXISTS idx_fait_sujet_actif ON fait (sujet_id) WHERE etat = 'actif';
 CREATE INDEX IF NOT EXISTS idx_fait_cible_actif ON fait (cible_id) WHERE etat = 'actif';
@@ -334,8 +264,8 @@ CREATE INDEX IF NOT EXISTS idx_fait_definition_champ ON fait (definition_champ_i
 CREATE INDEX IF NOT EXISTS idx_entite_type ON entite (type_entite_id);
 CREATE INDEX IF NOT EXISTS idx_entite_etat ON entite (etat);
 
--- Similarité trigramme : détection de doublons à la frappe.
+
 CREATE INDEX IF NOT EXISTS idx_entite_libelle_trgm ON entite USING gin (libelle gin_trgm_ops);
 
--- Recherche dans la projection des valeurs.
+
 CREATE INDEX IF NOT EXISTS idx_entite_valeurs ON entite USING gin (valeurs);

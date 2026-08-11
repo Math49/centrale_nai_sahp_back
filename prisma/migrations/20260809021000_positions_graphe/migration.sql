@@ -1,9 +1,5 @@
--- Disposition mémorisée du graphe.
---
--- Écrite depuis `prisma migrate diff`, dont on a **retiré les DROP INDEX** :
--- l'outil proposait de supprimer idx_dossier_entite_pivot, idx_fait_dossier et
--- idx_fait_visibilite_effective, qu'il ne connaît pas parce qu'ils vivent dans
--- prisma/sql/. Les laisser passer aurait défait le travail du lot 5.
+
+
 
 CREATE TABLE "position_graphe" (
     "id" UUID NOT NULL,

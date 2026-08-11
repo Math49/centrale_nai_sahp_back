@@ -36,14 +36,6 @@ import {
   SansPermission,
 } from './decorateurs';
 
-/**
- * Authentification.
- *
- * Le jeton part dans un **cookie `httpOnly`**, que le navigateur renvoie seul
- * et qu'aucun script de la page ne peut lire : une faille XSS ne l'exfiltre
- * pas. Il figure aussi dans le corps de la réponse, pour ce qui n'est pas un
- * navigateur — tests d'intégration, appels en ligne de commande, Swagger.
- */
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
@@ -118,8 +110,6 @@ export class AuthController {
       corps.nouveau,
     );
 
-    // Le changement incrémente `token_version` : sans repose du cookie, la
-    // requête suivante partirait avec un jeton que le garde vient de révoquer.
     poserCookie(reponse, this.configuration, session.jeton, this.dureeCookie);
 
     return session;

@@ -12,11 +12,6 @@ import {
   type Compte,
 } from './aide-comptes';
 
-/**
- * Recette du lot 3 : création complète du type Véhicule avec ses champs, du
- * type de lien « propriétaire de » avec ses contraintes de domaine, et d'un
- * onglet regroupant deux types de liens.
- */
 describe('Lot 3 — référentiel (e2e)', () => {
   let application: INestApplication;
   let serveur: Server;

@@ -73,8 +73,6 @@ export class DesignationEntiteDto {
   entiteId!: string;
 }
 
-// ───────────────────────────── Lecture ─────────────────────────────
-
 export class DossierResumeDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
   @ApiProperty() nom!: string;
@@ -126,7 +124,6 @@ export class PanneauDossierDto extends DossierResumeDto {
   habilitations!: AgentHabiliteDto[];
 }
 
-/** Rattachement d'une entité à un dossier, tel qu'il s'affiche sur sa fiche. */
 export class RattachementDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
   @ApiProperty() nom!: string;

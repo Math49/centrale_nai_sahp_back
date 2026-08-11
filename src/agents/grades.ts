@@ -1,13 +1,5 @@
 import { PERMISSIONS, type Permission } from './permissions';
 
-/**
- * Les trois grades RP, et leur répartition **initiale** de permissions.
- *
- * Cette répartition n'est qu'une amorce : les permissions de chaque grade sont
- * entièrement reconfigurables par l'administration. Elle n'est appliquée qu'à
- * la création d'un grade absent — jamais en écrasement d'un grade existant,
- * qui aurait pu être reconfiguré depuis.
- */
 export interface DefinitionGrade {
   code: string;
   libelle: string;

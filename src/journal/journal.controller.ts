@@ -89,11 +89,6 @@ export class JournalController {
   }
 
   @Get('orphelines')
-  // `entite.archiver` et non `journal.consulter`, malgré la place de l'écran en
-  // administration : lier une liste de ménage à la permission des journaux
-  // signifierait qu'on ne peut confier l'une sans confier l'autre — le relevé
-  // de qui a consulté quoi est un pouvoir d'une tout autre nature. Et qui voit
-  // un orphelin doit pouvoir en faire quelque chose.
   @Permissions(PERMISSIONS.ENTITE_ARCHIVER)
   @ApiOperation({
     summary: 'Entités orphelines',

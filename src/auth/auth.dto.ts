@@ -1,7 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, MaxLength, MinLength } from 'class-validator';
 
-/** Longueur minimale d'un mot de passe choisi par un agent. */
 export const LONGUEUR_MINIMALE_MOT_DE_PASSE = 12;
 
 export class ConnexionDto {

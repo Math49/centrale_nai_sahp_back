@@ -1,10 +1,3 @@
-/**
- * Catalogue des permissions — conception technique §6.7.
- *
- * Une permission décrit un *geste*, jamais un objet. Le droit de voir un objet
- * relève de la visibilité et de l'habilitation, qui sont deux axes distincts
- * (lot 5). Ne pas mélanger les trois.
- */
 export const PERMISSIONS = {
   ENTITE_CREER: 'entite.creer',
   ENTITE_MODIFIER: 'entite.modifier',
@@ -30,15 +23,6 @@ export const PERMISSIONS = {
 
   GRAPHE_REPOSITIONNER: 'graphe.repositionner',
 
-  /**
-   * Gestion des comptes et des grades.
-   *
-   * Ces deux codes ne figurent pas au catalogue de la conception technique.
-   * Ils y sont ajoutés parce que le catalogue accorde `agent.anonymiser` à
-   * l'État-Major : lui refuser la création d'un compte tout en lui permettant
-   * d'en retirer un serait incohérent. Le retrait garde sa permission propre,
-   * l'anonymisation étant un geste plus lourd que la création.
-   */
   AGENT_GERER: 'agent.gerer',
   ROLE_GERER: 'role.gerer',
 
@@ -50,7 +34,6 @@ export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
 export const TOUTES_LES_PERMISSIONS: readonly Permission[] =
   Object.values(PERMISSIONS);
 
-/** Libellés destinés à l'écran d'administration des rôles. */
 export const LIBELLES_PERMISSIONS: Record<Permission, string> = {
   [PERMISSIONS.ENTITE_CREER]: 'Créer une entité',
   [PERMISSIONS.ENTITE_MODIFIER]: 'Modifier une entité',

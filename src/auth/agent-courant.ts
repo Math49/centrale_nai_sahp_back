@@ -3,13 +3,6 @@ import type { Request } from 'express';
 
 import type { Permission } from '../agents/permissions';
 
-/**
- * Identité résolue à chaque requête par le garde d'authentification.
- *
- * Le garde relit l'agent en base à chaque appel plutôt que de se fier au
- * contenu du jeton : c'est ce qui rend `token_version`, `actif` et `anonymise`
- * immédiatement opposables. Le trafic attendu est de quelques agents.
- */
 export interface AgentCourant {
   id: string;
   matricule: string;
@@ -21,13 +14,6 @@ export interface AgentCourant {
   doitChangerMdp: boolean;
   permissions: Permission[];
 
-  /**
-   * Whitelists nominatives, résolues avec l'agent.
-   *
-   * Chargées à chaque requête, en même temps que le compte : le moteur de
-   * visibilité devient alors purement synchrone, ce qui le rend testable sans
-   * base et évite d'oublier de les charger sur un chemin de lecture.
-   */
   dossiersHabilites: string[];
   entitesHabilitees: string[];
 }
@@ -36,14 +22,11 @@ export interface RequeteAuthentifiee extends Request {
   agent?: AgentCourant;
 }
 
-/** Injecte l'agent courant dans une méthode de contrôleur. */
 export const Agent = createParamDecorator(
   (_donnees: unknown, contexte: ExecutionContext): AgentCourant => {
     const requete = contexte.switchToHttp().getRequest<RequeteAuthentifiee>();
 
     if (!requete.agent) {
-      // Impossible en pratique : le garde s'exécute avant. Le signaler
-      // franchement plutôt que de laisser passer un `undefined`.
       throw new Error(
         "@Agent() utilisé sur une route publique — aucun agent n'y est résolu",
       );

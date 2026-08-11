@@ -14,13 +14,6 @@ import type {
 } from './graphe.dto';
 import { GrapheService, type CheminTrouve } from './graphe.service';
 
-/**
- * Habillage du graphe pour l'écran.
- *
- * Le service de graphe ne connaît que des identifiants et des niveaux ; c'est
- * ici qu'on y ajoute les libellés de liens et les positions mémorisées, pour
- * que le front n'ait rien à recomposer.
- */
 @Injectable()
 export class GrapheAssembleurService {
   constructor(
@@ -64,14 +57,6 @@ export class GrapheAssembleurService {
     };
   }
 
-  /**
-   * La vue entière, habillée.
-   *
-   * L'écran de graphe la charge d'un bloc : tout ce que l'agent peut voir, à
-   * toute profondeur. Le trafic attendu se compte en dizaines d'agents et en
-   * milliers de nœuds — la vue tient, et l'exploration devient une navigation
-   * plutôt qu'une succession de dépliages.
-   */
   async vueEntiere(
     agent: AgentCourant,
     options: { fiabiliteMinimale: number; dossierId?: string },
@@ -150,12 +135,6 @@ export class GrapheAssembleurService {
     };
   }
 
-  /**
-   * Enregistre la disposition.
-   *
-   * Par dossier lorsqu'un dossier est indiqué, globalement sinon — deux index
-   * partiels distincts, parce qu'en SQL deux `NULL` ne s'égalent pas.
-   */
   async enregistrerPositions(
     agent: AgentCourant,
     disposition: DispositionDto,
@@ -196,12 +175,10 @@ export class GrapheAssembleurService {
       return new Map();
     }
 
-    // Dans un dossier, sa disposition prime ; à défaut, la globale sert de
-    // repli, pour qu'un nœud jamais repositionné dans ce dossier ne saute pas.
     const enregistrees = await this.prisma.positionGraphe.findMany({
       where: {
         entiteId: { in: entiteIds },
-        // `in` n'accepte pas NULL : le repli global s'exprime en alternative.
+
         ...(dossierId
           ? { OR: [{ dossierId }, { dossierId: null }] }
           : { dossierId: null }),

@@ -7,6 +7,6 @@ coverage
 !.env.example
 *.tsbuildinfo
 
-# Le volume de fichiers de développement n'a rien à faire dans une image.
+
 donnees
 test

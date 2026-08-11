@@ -37,8 +37,6 @@ export class FaitsService {
   ) {}
 
   async creer(agent: AgentCourant, donnees: CreationFaitDto): Promise<FaitDto> {
-    // Écrire sur une entité qu'on ne voit pas est impossible : 404, comme en
-    // lecture, pour ne pas confirmer son existence.
     await this.visibilite.entiteVisibleOuIntrouvable(agent, donnees.sujetId);
 
     if (donnees.visibilite !== undefined) {
@@ -164,19 +162,11 @@ export class FaitsService {
     return this.presenter(fait);
   }
 
-  /**
-   * Modification d'un fait.
-   *
-   * La cible d'un lien ne se corrige pas : un lien mal posé s'infirme (lot 11)
-   * et se refait. Corriger la cible en place réécrirait l'histoire du graphe
-   * sans laisser de trace de ce qui avait été affirmé.
-   */
   async modifier(
     agent: AgentCourant,
     id: string,
     donnees: ModificationFaitDto,
   ): Promise<FaitDto> {
-    // Lecture filtrée : un fait masqué est introuvable, pas refusé.
     const avant = await this.visibilite.clientPour(agent).fait.findFirst({
       where: { id },
       include: { definitionChamp: true },
@@ -266,17 +256,6 @@ export class FaitsService {
     return this.presenter(fait);
   }
 
-  /**
-   * Infirmation — un fait contredit passe en état `infirme`.
-   *
-   * Il **sort du graphe actif** et reste consultable dans l'onglet Historique.
-   * Il n'est jamais supprimé : ce que le service a cru un moment fait partie de
-   * ce que le service a su, et l'effacer réécrirait son histoire.
-   *
-   * Les triggers font le reste sans qu'on ait à y penser — la projection ignore
-   * les faits non actifs, donc la valeur disparaît de la fiche, et l'unicité se
-   * recalcule, donc la plaque redevient attribuable.
-   */
   async infirmer(
     agent: AgentCourant,
     id: string,
@@ -300,8 +279,6 @@ export class FaitsService {
         data: { etat: EtatFait.infirme, modifiePar: agent.id },
       });
 
-      // Le motif vit dans le journal et non sur le fait : c'est une
-      // circonstance de l'infirmation, pas une propriété de l'information.
       await this.audit.tracer(
         {
           agentId: agent.id,

@@ -1,15 +1,5 @@
--- Projection des faits sur l'entité : `entite.valeurs` et `entite.libelle`.
---
--- La vérité est dans `fait`. Cette fonction en maintient une vue matérialisée,
--- pour que la fiche s'affiche en une requête et que la cohérence soit garantie
--- par la base plutôt que par la discipline de l'application.
---
--- Choix de projection :
---   · champ multiple  → tableau de toutes les valeurs actives
---   · champ simple    → la valeur du fait le plus fiable, puis le plus récent
---
--- Deux faits peuvent porter la même affirmation depuis deux sources : c'est
--- normal, et c'est le meilleur des deux qui l'emporte à l'affichage.
+
+
 
 CREATE OR REPLACE FUNCTION projeter_entite(p_entite_id uuid)
 RETURNS void AS $$
@@ -61,8 +51,7 @@ BEGIN
     );
   END LOOP;
 
-  -- Un champ non renseigné laisse un trou ; on resserre les espaces plutôt que
-  -- d'afficher « Tyron   » ou «  Banks ».
+
   v_libelle := btrim(regexp_replace(v_libelle, '\s+', ' ', 'g'));
 
   IF v_libelle = '' THEN

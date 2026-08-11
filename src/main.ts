@@ -13,8 +13,6 @@ async function demarrer(): Promise<void> {
 
   application.enableShutdownHooks();
 
-  // Le jeton arrive dans un cookie `httpOnly` : sans analyseur, `req.cookies`
-  // resterait vide et le garde ne verrait jamais de session.
   application.use(cookieParser());
 
   application.useGlobalPipes(
@@ -25,9 +23,6 @@ async function demarrer(): Promise<void> {
     }),
   );
 
-  // `credentials: true` est indispensable au cookie de session : sans lui, le
-  // navigateur refuse de l'envoyer sur une requête d'origine différente. La
-  // liste d'origines reste close — jamais de joker avec des identifiants.
   application.enableCors({
     origin: configuration.get('CORS_ORIGINES', { infer: true }),
     credentials: true,

@@ -1,4 +1,4 @@
--- CreateTable
+
 CREATE TABLE "role" (
     "id" UUID NOT NULL,
     "code" TEXT NOT NULL,
@@ -9,7 +9,7 @@ CREATE TABLE "role" (
     CONSTRAINT "role_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable
+
 CREATE TABLE "agent" (
     "id" UUID NOT NULL,
     "matricule" TEXT NOT NULL,
@@ -28,7 +28,7 @@ CREATE TABLE "agent" (
     CONSTRAINT "agent_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable
+
 CREATE TABLE "journal_audit" (
     "id" BIGSERIAL NOT NULL,
     "agent_id" UUID,
@@ -42,20 +42,20 @@ CREATE TABLE "journal_audit" (
     CONSTRAINT "journal_audit_pkey" PRIMARY KEY ("id")
 );
 
--- CreateIndex
+
 CREATE UNIQUE INDEX "role_code_key" ON "role"("code");
 
--- CreateIndex
+
 CREATE UNIQUE INDEX "agent_matricule_key" ON "agent"("matricule");
 
--- CreateIndex
+
 CREATE INDEX "journal_audit_cible_table_cible_id_idx" ON "journal_audit"("cible_table", "cible_id");
 
--- CreateIndex
+
 CREATE INDEX "journal_audit_effectue_le_idx" ON "journal_audit"("effectue_le");
 
--- AddForeignKey
+
 ALTER TABLE "agent" ADD CONSTRAINT "agent_role_id_fkey" FOREIGN KEY ("role_id") REFERENCES "role"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+
 ALTER TABLE "journal_audit" ADD CONSTRAINT "journal_audit_agent_id_fkey" FOREIGN KEY ("agent_id") REFERENCES "agent"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

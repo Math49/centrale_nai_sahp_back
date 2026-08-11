@@ -4,7 +4,6 @@ import { EtatEntite, EtatFait, NatureFait, Visibilite } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { BusInvalidation } from './bus-invalidation';
 
-/** Un nœud du graphe : une entité, réduite à ce que la traversée exige. */
 export interface Noeud {
   id: string;
   libelle: string;
@@ -13,13 +12,6 @@ export interface Noeud {
   visibilite: Visibilite;
 }
 
-/**
- * Une arête : un fait de nature lien.
- *
- * Elle porte les quatre gardiens dont dépend son élagage. Les recopier ici
- * évite d'aller les rechercher en base à chaque traversée — le graphe existe
- * précisément pour que le parcours ne touche pas la base.
- */
 export interface Arete {
   faitId: string;
   typeLienId: string;
@@ -35,27 +27,16 @@ export interface Arete {
 
 export interface GrapheComplet {
   noeuds: Map<string, Noeud>;
-  /** Arêtes atteignables depuis un nœud, dans les deux sens. */
+
   adjacence: Map<string, Arete[]>;
-  /** La même arête, retrouvée par l'identifiant de son fait. */
+
   aretesParFait: Map<string, Arete>;
-  /** Dossiers visibles qui suivent chaque entité. */
+
   dossiersParEntite: Map<string, Set<string>>;
   visibiliteDesDossiers: Map<string, Visibilite>;
   charge: Date;
 }
 
-/**
- * Cache du graphe.
- *
- * **Il contient tout** — y compris ce qu'aucun agent n'a le droit de voir — et
- * n'est jamais servi brut. C'est le service de graphe qui l'élague, agent par
- * agent, avant toute traversée.
- *
- * Chargé au démarrage, invalidé par événement à chaque écriture. Le trafic
- * attendu est de quelques agents : un rechargement complet coûte moins cher
- * qu'une maintenance incrémentale, qui se désynchroniserait un jour.
- */
 @Injectable()
 export class CacheGrapheService implements OnModuleInit {
   private readonly journal = new Logger(CacheGrapheService.name);
@@ -71,8 +52,6 @@ export class CacheGrapheService implements OnModuleInit {
   async onModuleInit(): Promise<void> {
     this.bus.auSignal(() => this.invalider());
 
-    // Un échec de chargement au démarrage ne doit pas empêcher l'API de
-    // répondre : la première traversée réessaiera.
     await this.obtenir().catch((erreur: Error) => {
       this.journal.warn(`graphe non chargé au démarrage — ${erreur.message}`);
       return null;
@@ -83,13 +62,11 @@ export class CacheGrapheService implements OnModuleInit {
     this.graphe = null;
   }
 
-  /** Le graphe courant, chargé si besoin. */
   async obtenir(): Promise<GrapheComplet> {
     if (this.graphe) {
       return this.graphe;
     }
 
-    // Deux requêtes concurrentes ne doivent pas déclencher deux chargements.
     this.chargement ??= this.charger().finally(() => {
       this.chargement = null;
     });
@@ -101,8 +78,6 @@ export class CacheGrapheService implements OnModuleInit {
     const debut = Date.now();
 
     const [entites, faits, suivis, dossiers] = await Promise.all([
-      // Sans filtre, et c'est voulu : le graphe contient tout, l'élagage vient
-      // après. Charger filtré obligerait à un cache par agent.
       this.prisma.sansFiltre.entite.findMany({
         where: { etat: EtatEntite.actif, fusionneeVersId: null },
         include: { typeEntite: { select: { code: true } } },
@@ -160,8 +135,6 @@ export class CacheGrapheService implements OnModuleInit {
       const sujet = noeuds.get(fait.sujetId);
       const cible = fait.cibleId ? noeuds.get(fait.cibleId) : undefined;
 
-      // Une arête vers une entité archivée ou fusionnée n'a plus de nœud : elle
-      // sort du graphe actif avec elle.
       if (!sujet || !cible) {
         continue;
       }
@@ -181,8 +154,6 @@ export class CacheGrapheService implements OnModuleInit {
         visibiliteCible: cible.visibilite,
       };
 
-      // Le graphe se parcourt dans les deux sens : un lien est une arête
-      // unique, mais elle se franchit depuis ses deux extrémités.
       relier(arete.sujetId, arete);
       relier(arete.cibleId, arete);
       aretesParFait.set(arete.faitId, arete);

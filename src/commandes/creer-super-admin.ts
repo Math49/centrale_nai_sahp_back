@@ -1,19 +1,3 @@
-/**
- * Amorçage d'une instance : crée les grades manquants et un compte super-admin.
- *
- * Il n'existe pas d'inscription libre, et le premier compte ne peut donc pas
- * être créé par l'API. Cette commande est la seule porte d'entrée.
- *
- *   npm run agent:super-admin -- 2291 Mathis Mercier
- *
- * Arguments positionnels et non nommés : npm intercepte les options longues
- * qu'il ne connaît pas, même placées après `--`, et elles n'atteindraient
- * jamais ce script.
- *
- * Le mot de passe n'est jamais passé en argument : il serait visible dans
- * l'historique du shell et dans la liste des processus. Il est engendré,
- * affiché une seule fois, et le compte est en changement imposé.
- */
 import { NestFactory } from '@nestjs/core';
 
 import { AgentsModule } from '../agents/agents.module';
@@ -22,8 +6,6 @@ import { CODE_ETAT_MAJOR } from '../agents/grades';
 import { RolesService } from '../agents/roles.service';
 import { AppModule } from '../app.module';
 
-// Sortie de commande, pas de journal applicatif : le logger Nest est réduit au
-// silence pour que le mot de passe provisoire ne se perde pas dans l'amorçage.
 const dire = (ligne = ''): void => {
   process.stdout.write(`${ligne}\n`);
 };

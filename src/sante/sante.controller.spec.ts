@@ -17,8 +17,6 @@ describe('SanteController', () => {
     return module.get(SanteController);
   };
 
-  /** Renvoie la réponse Express factice et le mock de `status`, séparément :
-   *  lire `reponse.status` dans un `expect` déclencherait `unbound-method`. */
   const reponseFactice = (): [Response, jest.Mock] => {
     const status = jest.fn();
     return [{ status } as unknown as Response, status];

@@ -1,13 +1,3 @@
-/**
- * Peuple une instance avec le parcours de référence — le groupe Madrina.
- *
- *   npm run semences:madrina
- *
- * Installe le référentiel s'il est absent, puis rejoue la saisie de l'annexe B
- * de l'étude du besoin. Refuse de s'exécuter si des entités existent déjà :
- * rejouer le parcours par-dessus des données produirait des doublons, et la
- * plaque unique ferait échouer la commande à mi-chemin.
- */
 import { NestFactory } from '@nestjs/core';
 
 import { AppModule } from '../app.module';
@@ -41,8 +31,6 @@ async function executer(): Promise<void> {
       return;
     }
 
-    // Les créations sont attribuées à un compte réel : les faits portent une
-    // clé étrangère vers leur auteur, et rien ne se crée sans auteur.
     const auteur = await prisma.agent.findFirst({
       where: { superAdmin: true, actif: true, anonymise: false },
       orderBy: { creeLe: 'asc' },

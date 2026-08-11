@@ -14,13 +14,6 @@ import { RolesService } from '../src/agents/roles.service';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 
-/**
- * Recette du lot 1.
- *
- * Contrôleur monté pour la seule durée des tests, **volontairement dépourvu de
- * tout décorateur**. Il matérialise la propriété la plus importante du lot :
- * une route qu'on oublie de décorer est refusée, pas ouverte.
- */
 @Controller('essai-sans-decorateur')
 class ControleurNonDecore {
   @Get()
@@ -96,7 +89,6 @@ describe('Lot 1 — authentification, comptes et refus par défaut (e2e)', () =>
     await application?.close();
   });
 
-  /** Connexion puis changement du mot de passe imposé, en un geste. */
   async function activer(compte: {
     matricule: string;
     motDePasse: string;
@@ -450,9 +442,6 @@ describe('Lot 1 — authentification, comptes et refus par défaut (e2e)', () =>
         where: { cibleId: adjoint.id },
       });
 
-      // `journal_audit.id` est un bigserial, que JSON.stringify ne sait pas
-      // sérialiser seul. Le lot 11, qui exposera le journal, devra le convertir
-      // dans ses DTO.
       const serialise = JSON.stringify(traces, (_cle, valeur: unknown) =>
         typeof valeur === 'bigint' ? valeur.toString() : valeur,
       );
@@ -522,7 +511,6 @@ describe('Lot 1 — authentification, comptes et refus par défaut (e2e)', () =>
     });
 
     it('la reconfiguration est immédiatement opposable', async () => {
-      // Le junior avait dossier.creer ; il ne lui reste que entite.creer.
       const moi = await request(serveur)
         .get('/auth/moi')
         .set('Authorization', `Bearer ${junior.jeton}`)

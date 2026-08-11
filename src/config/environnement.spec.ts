@@ -13,6 +13,8 @@ describe('validerEnvironnement', () => {
     expect(environnement.PORT).toBe(3000);
     expect(environnement.CORS_ORIGINES).toEqual(['http://localhost:3001']);
     expect(environnement.SWAGGER_ACTIF).toBe(true);
+    expect(environnement.SUPER_ADMIN_MATRICULE).toBeUndefined();
+    expect(environnement.SUPER_ADMIN_GRADE).toBe('etat_major');
   });
 
   it('refuse de démarrer sans DATABASE_URL', () => {
@@ -59,5 +61,27 @@ describe('validerEnvironnement', () => {
       'http://localhost:3001',
       'https://ni.example',
     ]);
+  });
+
+  it('valide les champs du premier super-admin quand ils sont fournis', () => {
+    const environnement = validerEnvironnement({
+      ...minimal,
+      SUPER_ADMIN_MATRICULE: '2291',
+      SUPER_ADMIN_PRENOM: 'Mathis',
+      SUPER_ADMIN_NOM: 'Mercier',
+      SUPER_ADMIN_MOT_DE_PASSE: 'mot-de-passe-long',
+    });
+
+    expect(environnement.SUPER_ADMIN_MATRICULE).toBe('2291');
+    expect(environnement.SUPER_ADMIN_GRADE).toBe('etat_major');
+  });
+
+  it('refuse un mot de passe initial super-admin trop court', () => {
+    expect(() =>
+      validerEnvironnement({
+        ...minimal,
+        SUPER_ADMIN_MOT_DE_PASSE: 'court',
+      }),
+    ).toThrow(/SUPER_ADMIN_MOT_DE_PASSE/);
   });
 });

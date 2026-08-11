@@ -1,15 +1,5 @@
--- Visibilité effective d'un fait, et ses deux cascades.
---
--- Un fait prend la plus restrictive parmi : la sienne, celle de son dossier de
--- saisie, celle de son sujet et celle de sa cible. Une entité, elle, ne porte
--- que sa visibilité propre — l'appartenance à un dossier ne la restreint pas.
---
--- L'énuméré `visibilite` est déclaré dans l'ordre public < restreint < prive :
--- GREATEST y rend donc la valeur la plus restrictive.
---
--- ATTENTION — trigger **BEFORE**. En AFTER, la ligne renvoyée par le RETURNING
--- d'un `create` Prisma serait périmée : l'API annoncerait à l'agent qui vient
--- d'écrire une visibilité qui n'est pas celle enregistrée.
+
+
 
 CREATE OR REPLACE FUNCTION calculer_visibilite_effective(
   p_visibilite_propre visibilite,
@@ -53,11 +43,6 @@ CREATE TRIGGER trg_fait_visibilite
 BEFORE INSERT OR UPDATE ON fait
 FOR EACH ROW EXECUTE FUNCTION fait_visibilite();
 
--- ─── Cascade depuis l'entité ───
---
--- Reclasser une entité en privé doit masquer d'un coup tous les faits dont elle
--- est le sujet **ou la cible**. Oublier la cible laisserait lisible « Tyron →
--- membre de → groupe devenu privé ».
 
 CREATE OR REPLACE FUNCTION entite_visibilite_cascade()
 RETURNS trigger AS $$
@@ -79,11 +64,6 @@ FOR EACH ROW
 WHEN (OLD.visibilite IS DISTINCT FROM NEW.visibilite)
 EXECUTE FUNCTION entite_visibilite_cascade();
 
--- ─── Cascade depuis le dossier ───
---
--- C'est ce qui rend possible le cas de référence : l'entité reste publique,
--- le dossier qui la vise passe en privé, et tout ce qui a été écrit depuis ce
--- dossier disparaît pour qui n'y est pas habilité.
 
 CREATE OR REPLACE FUNCTION dossier_visibilite_cascade()
 RETURNS trigger AS $$

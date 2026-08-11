@@ -1,17 +1,3 @@
-# Centrale N&I — déploiement de production.
-#
-# Quatre services et une tâche de sauvegarde, comme le prévoit la conception
-# technique §2. À lancer depuis ce dépôt ; le front est construit depuis le
-# dépôt voisin, indiqué par `CHEMIN_FRONT`.
-#
-#   cp .env.production.example .env.production
-#   # renseigner les secrets, puis :
-#   docker compose --env-file .env.production up -d --build
-#
-# **Instance unique, et c'est structurel** : le graphe vit en mémoire dans le
-# processus Nest. Mettre à l'échelle horizontalement exigerait de sortir le
-# cache dans un Redis partagé. Hors périmètre de la V1.
-
 name: centrale-ni
 
 services:
@@ -24,17 +10,29 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - donnees_postgres:/var/lib/postgresql/data
-    # Aucun port publié : la base n'est jointe que par le réseau interne.
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
       interval: 10s
       timeout: 5s
       retries: 12
 
+  pgadmin:
+    image: dpage/pgadmin4:8
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:?renseigner PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:?renseigner PGADMIN_PASSWORD}
+      PGADMIN_CONFIG_SERVER_MODE: 'True'
+    ports:
+      - '127.0.0.1:${PGADMIN_PORT:-5050}:80'
+    volumes:
+      - pgadmin_donnees:/var/lib/pgadmin
+
   api:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ${API_IMAGE:?renseigner API_IMAGE}
     restart: unless-stopped
     depends_on:
       postgres:
@@ -44,19 +42,20 @@ services:
       PORT: '3000'
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
       CORS_ORIGINES: https://${DOMAINE}
-      # Jamais exposée en production : le contrat est figé et publié au front.
       SWAGGER_ACTIF: 'false'
       JWT_SECRET: ${JWT_SECRET}
       JWT_DUREE: ${JWT_DUREE:-7d}
-      # Le proxy TLS est la seule porte d'entrée : le cookie de session ne doit
-      # jamais repartir en clair.
+      SUPER_ADMIN_MATRICULE: ${SUPER_ADMIN_MATRICULE:?renseigner SUPER_ADMIN_MATRICULE}
+      SUPER_ADMIN_PRENOM: ${SUPER_ADMIN_PRENOM:?renseigner SUPER_ADMIN_PRENOM}
+      SUPER_ADMIN_NOM: ${SUPER_ADMIN_NOM:?renseigner SUPER_ADMIN_NOM}
+      SUPER_ADMIN_MOT_DE_PASSE: ${SUPER_ADMIN_MOT_DE_PASSE:?renseigner SUPER_ADMIN_MOT_DE_PASSE}
+      SUPER_ADMIN_GRADE: ${SUPER_ADMIN_GRADE:-etat_major}
       COOKIE_SECURE: 'true'
       VIEILLISSEMENT_JOURS: ${VIEILLISSEMENT_JOURS:-30}
       FICHIERS_RACINE: /app/donnees/fichiers
       FICHIER_TAILLE_MAX_MO: ${FICHIER_TAILLE_MAX_MO:-8}
     volumes:
       - fichiers:/app/donnees/fichiers
-    # Aucun port publié : le proxy est la seule porte d'entrée.
     healthcheck:
       test:
         [
@@ -71,13 +70,7 @@ services:
       start_period: 40s
 
   front:
-    build:
-      context: ${CHEMIN_FRONT:-../centrale_nai_sahp_front}
-      dockerfile: Dockerfile
-      args:
-        # Inlinée dans le bundle à la construction : le front appelle l'API
-        # depuis le navigateur, jamais depuis son propre processus.
-        NEXT_PUBLIC_API_URL: https://${DOMAINE}/api
+    image: ${FRONT_IMAGE:?renseigner FRONT_IMAGE}
     restart: unless-stopped
     depends_on:
       - api
@@ -98,10 +91,6 @@ services:
       - caddy_donnees:/data
       - caddy_configuration:/config
 
-  # Sauvegarde quotidienne, base **et** volume de fichiers.
-  #
-  # Une base restaurée sans ses images est une base à moitié perdue : il
-  # n'existe aucune source depuis laquelle réimporter les photos versées.
   sauvegarde:
     image: postgres:17-alpine
     restart: unless-stopped
@@ -124,6 +113,7 @@ services:
 
 volumes:
   donnees_postgres:
+  pgadmin_donnees:
   fichiers:
   sauvegardes:
   caddy_donnees:

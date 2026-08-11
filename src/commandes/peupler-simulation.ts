@@ -1,18 +1,3 @@
-/**
- * Peuple une instance avec une simulation d'usage réel du service.
- *
- *   npm run semences:simulation
- *
- * Quatre organisations, une centaine d'entités, des enquêtes qui se
- * chevauchent, des sources de qualité inégale, des faits infirmés, des fiches
- * archivées, un dossier privé. C'est le jeu qui sert à juger les écrans ;
- * `npm run semences:madrina` reste le parcours de recette, plus court et plus
- * tendu.
- *
- * Refuse de s'exécuter par-dessus des données existantes : rejouer le
- * peuplement produirait des doublons, et la plaque unique ferait échouer la
- * commande à mi-chemin.
- */
 import { NestFactory } from '@nestjs/core';
 
 import { AppModule } from '../app.module';

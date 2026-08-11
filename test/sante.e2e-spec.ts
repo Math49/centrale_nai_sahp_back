@@ -6,10 +6,6 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import type { SanteReponseDto } from '../src/sante/sante.dto';
 
-/**
- * Recette du lot 0 : sur une base réellement démarrée, la route de santé répond.
- * Nécessite `docker compose -f docker-compose.dev.yml up -d postgres`.
- */
 describe('GET /sante (e2e)', () => {
   let application: INestApplication;
   let serveur: Server;

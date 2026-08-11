@@ -3,21 +3,10 @@ import { Prisma } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
 
-/**
- * Explication des refus d'unicité.
- *
- * C'est la base qui refuse — la clé primaire de `valeur_unique`, maintenue par
- * trigger — et c'est très bien ainsi : la garantie ne dépend d'aucun contrôle
- * applicatif. Mais Prisma ne relaie ni le nom de la contrainte ni le message
- * levé par le trigger : il rend un P2002 sans cible. Ce service relit donc la
- * table pour nommer la valeur en cause, uniquement afin d'écrire une phrase
- * utile à l'agent.
- */
 @Injectable()
 export class UniciteService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Vrai lorsque l'erreur est un refus d'unicité venu de la base. */
   estUnRefusDUnicite(erreur: unknown): boolean {
     return (
       erreur instanceof Prisma.PrismaClientKnownRequestError &&
@@ -25,10 +14,6 @@ export class UniciteService {
     );
   }
 
-  /**
-   * Renvoie une phrase nommant la valeur déjà prise, ou `null` si aucune des
-   * valeurs proposées n'est en cause.
-   */
   async decrireLeConflit(
     typeEntiteId: string,
     candidats: { definitionChampId: string; valeur: unknown }[],

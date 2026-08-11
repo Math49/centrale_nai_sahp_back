@@ -37,7 +37,6 @@ import type {
 import { UniciteService } from './unicite.service';
 import { ValidationDynamiqueService } from './validation-dynamique.service';
 
-/** Provenance résolue : ce que chaque fait finit par porter. */
 export interface Provenance {
   source: string;
   fiabilite: number;
@@ -55,10 +54,8 @@ interface FiltresAnnuaire {
 
 type TypeAvecChamps = TypeEntite & { champs: DefinitionChamp[] };
 
-/** Au-delà, une saisie n'est plus « en cours » : elle s'archive. */
 const DELAI_ANNULATION = 60 * 60 * 1000;
 
-/** Ordre de préséance des faits d'un même champ dans la projection. */
 const PRESEANCE: Prisma.FaitOrderByWithRelationInput[] = [
   { fiabilite: 'desc' },
   { dateConstatation: 'desc' },
@@ -76,8 +73,6 @@ export class EntitesService {
     private readonly audit: JournalAuditService,
     private readonly bus: BusInvalidation,
   ) {}
-
-  // ─────────────────────────── Création ───────────────────────────
 
   async creer(
     agent: AgentCourant,
@@ -114,8 +109,7 @@ export class EntitesService {
           const entite = await transaction.entite.create({
             data: {
               typeEntiteId: type.id,
-              // Le trigger de projection écrira le vrai libellé dès le premier
-              // fait ; l'appel explicite plus bas couvre l'entité sans fait.
+
               libelle: '',
               note: donnees.note,
               visibilite: donnees.visibilite ?? Visibilite.public,
@@ -157,8 +151,6 @@ export class EntitesService {
             });
           }
 
-          // Une entité saisie depuis un dossier entre dans son suivi : c'est
-          // le geste que l'agent croit faire en la créant depuis là.
           if (donnees.dossierId) {
             await transaction.suivi.create({
               data: {
@@ -169,7 +161,6 @@ export class EntitesService {
             });
           }
 
-          // Une entité sans aucun fait n'a jamais déclenché le trigger.
           await transaction.$executeRaw`SELECT projeter_entite(${entite.id}::uuid)`;
 
           await this.audit.tracer(
@@ -196,21 +187,6 @@ export class EntitesService {
     return this.lire(agent, id);
   }
 
-  // ─────────────────────────── Lecture ───────────────────────────
-
-  /**
-   * Fiche assemblée pour un agent donné.
-   *
-   * Deux choses s'y jouent :
-   *
-   * · L'entité doit exister **pour cet agent** — sinon 404, jamais 403.
-   *
-   * · La projection est **recomposée depuis les faits visibles**, et non
-   *   recopiée depuis `entite.valeurs`, qui agrège tous les faits sans égard
-   *   pour la visibilité. C'est exactement le cas de référence : l'entité reste
-   *   consultable, mais tout ce qui a été écrit sur elle depuis un dossier privé
-   *   doit disparaître de sa fiche.
-   */
   async lire(agent: AgentCourant, id: string): Promise<FicheEntiteDto> {
     const controle = await this.visibilite.entiteVisibleOuIntrouvable(
       agent,
@@ -235,10 +211,6 @@ export class EntitesService {
     const client = this.visibilite.clientPour(agent);
     const dossiers = await this.dossiers.rattachements(agent, id);
 
-    // Les `include` de sujet et de cible ne sont pas filtrés — ils n'ont pas à
-    // l'être : un fait dont la cible est privée est lui-même au moins privé par
-    // héritage, donc déjà écarté. C'est la règle des gardiens qui rend ces
-    // jointures sûres.
     const [faitsSujet, faitsCible] = await Promise.all([
       client.fait.findMany({
         where: { sujetId: id, etat: EtatFait.actif },
@@ -291,9 +263,6 @@ export class EntitesService {
       })),
     ];
 
-    // Les onglets sont peuplés ici, et non par le front : les assembler
-    // là-bas supposerait qu'il connaisse la règle des gardiens, donc qu'elle
-    // existe en deux exemplaires.
     const regroupes = new Set<string>();
 
     const onglets = entite.typeEntite.onglets.map((onglet) => {
@@ -310,8 +279,7 @@ export class EntitesService {
         id: onglet.id,
         libelle: onglet.libelle,
         ordre: onglet.ordre,
-        // Le compteur donne l'échelle de la fiche sans avoir à cliquer, et ne
-        // compte que ce que l'agent peut voir.
+
         compteur: contenu.length,
         liens: contenu,
       };
@@ -337,13 +305,6 @@ export class EntitesService {
     };
   }
 
-  /**
-   * Onglet Historique : ce qui est sorti du graphe actif, et ce qui a changé.
-   *
-   * Deux sources en une : les faits infirmés ou archivés — qui ne sont jamais
-   * supprimés et restent consultables — et les traces d'écriture du journal
-   * d'audit. Soumis à la permission `historique.consulter`.
-   */
   async historique(
     agent: AgentCourant,
     id: string,
@@ -395,8 +356,6 @@ export class EntitesService {
         survenuLe: fait.modifieLe.toISOString(),
       })),
       ...traces.map((trace) => ({
-        // `journal_audit.id` est un bigserial, que JSON.stringify ne sait pas
-        // sérialiser : il se convertit ici, pas plus loin.
         id: trace.id.toString(),
         nature: 'modification' as const,
         libelle: trace.action,
@@ -446,13 +405,6 @@ export class EntitesService {
     );
   }
 
-  /**
-   * Détection de doublons à la frappe.
-   *
-   * **Ne propose jamais une entité privée**, sans le mentionner. Conséquence
-   * assumée : un agent peut créer un doublon d'une entité qu'il ne voit pas —
-   * aucune contre-mesure n'existe sans révéler l'existence de l'entité cachée.
-   */
   async similaires(
     agent: AgentCourant,
     q: string,
@@ -510,8 +462,6 @@ export class EntitesService {
     }));
   }
 
-  // ─────────────────────────── Écriture ───────────────────────────
-
   async modifier(
     agent: AgentCourant,
     id: string,
@@ -543,29 +493,6 @@ export class EntitesService {
     return this.lire(agent, id);
   }
 
-  /**
-   * Fusion de doublons — `id` est **absorbée**, `versId` est conservée.
-   *
-   * Tout ce que portait l'absorbée passe à la conservée : ses faits, dans les
-   * deux sens, ses fichiers, ses suivis, ses habilitations, et jusqu'aux
-   * dossiers qui l'avaient prise pour pivot. Rien ne se perd, et rien ne se
-   * supprime — l'absorbée reste en base, archivée, avec `fusionnee_vers_id`
-   * qui la fait rediriger.
-   *
-   * C'est cette redirection qui rend la fusion sûre : un lien de la centrale
-   * vers l'ancienne fiche, une trace de journal, un signet d'agent continuent
-   * de mener quelque part.
-   *
-   * Deux précautions valent d'être dites :
-   *
-   * - **Les liens entre les deux doublons s'infirment d'abord.** Une fois
-   *   fusionnés, ils relieraient l'entité à elle-même, ce que la contrainte
-   *   `fait_pas_de_boucle` refuse — et à raison : « Tyron est propriétaire de
-   *   Tyron » n'affirme rien.
-   * - **Les suivis et les habilitations se reportent par upsert.** Les deux
-   *   doublons peuvent être suivis par le même dossier, et leur clé primaire
-   *   est composite.
-   */
   async fusionner(
     agent: AgentCourant,
     id: string,
@@ -577,8 +504,6 @@ export class EntitesService {
       );
     }
 
-    // Les deux passent par le contrôle de visibilité : fusionner vers une
-    // fiche qu'on ne voit pas reviendrait à en confirmer l'existence.
     const [absorbee, conservee] = await Promise.all([
       this.visibilite.entiteVisibleOuIntrouvable(agent, id),
       this.visibilite.entiteVisibleOuIntrouvable(agent, versId),
@@ -603,7 +528,6 @@ export class EntitesService {
       { typeEntiteId: conservee.typeEntiteId, entiteId: versId, champs: [] },
       () =>
         this.prisma.$transaction(async (transaction) => {
-          // 1 — les liens entre les deux doublons, qui deviendraient des boucles
           const entreLesDeux = await transaction.fait.updateMany({
             where: {
               nature: NatureFait.lien,
@@ -616,7 +540,6 @@ export class EntitesService {
             data: { etat: EtatFait.infirme, modifiePar: agent.id },
           });
 
-          // 2 — les faits, dans les deux sens
           await transaction.fait.updateMany({
             where: { sujetId: id },
             data: { sujetId: versId },
@@ -626,7 +549,6 @@ export class EntitesService {
             data: { cibleId: versId },
           });
 
-          // 3 — ce qui pendait à l'absorbée
           await transaction.fichier.updateMany({
             where: { entiteId: id },
             data: { entiteId: versId },
@@ -639,13 +561,10 @@ export class EntitesService {
           await this.reporterSuivis(transaction, id, versId);
           await this.reporterHabilitations(transaction, id, versId);
 
-          // Les positions du graphe se jettent plutôt qu'elles ne se reportent :
-          // deux nœuds fusionnés n'ont pas deux places sur la toile.
           await transaction.positionGraphe.deleteMany({
             where: { entiteId: id },
           });
 
-          // 4 — la redirection, et l'archivage de l'absorbée
           await transaction.entite.update({
             where: { id },
             data: { fusionneeVersId: versId, etat: EtatEntite.archive },
@@ -673,7 +592,6 @@ export class EntitesService {
     return this.lire(agent, versId);
   }
 
-  /** Report d'un suivi, en tolérant que les deux doublons soient déjà suivis. */
   private async reporterSuivis(
     transaction: Prisma.TransactionClient,
     absorbee: string,
@@ -703,13 +621,6 @@ export class EntitesService {
     await transaction.suivi.deleteMany({ where: { entiteId: absorbee } });
   }
 
-  /**
-   * Report des habilitations.
-   *
-   * Elles s'additionnent : qui était habilité sur l'une des deux fiches l'est
-   * sur celle qui subsiste. Le contraire retirerait un accès à quelqu'un sans
-   * que personne ne l'ait décidé.
-   */
   private async reporterHabilitations(
     transaction: Prisma.TransactionClient,
     absorbee: string,
@@ -741,12 +652,6 @@ export class EntitesService {
     });
   }
 
-  /**
-   * Archivage — pas de suppression.
-   *
-   * L'entité sort des écrans courants mais reste consultable, et ses faits
-   * restent intacts : rien n'est jamais supprimé.
-   */
   async changerEtat(
     agent: AgentCourant,
     id: string,
@@ -787,19 +692,6 @@ export class EntitesService {
     return this.lire(agent, id);
   }
 
-  /**
-   * Annulation d'une saisie en cascade.
-   *
-   * Ce n'est pas une suppression de renseignement, mais le retrait d'une saisie
-   * qui n'est jamais allée au bout : le sous-formulaire a persisté une entité,
-   * puis l'agent a fait marche arrière. L'invariant « rien n'est jamais
-   * supprimé » porte sur l'information établie, pas sur une frappe abandonnée.
-   *
-   * Quatre verrous, faute de quoi ce serait une porte de suppression déguisée :
-   * seul l'auteur, dans l'heure, sur une entité que rien d'autre ne désigne, et
-   * qui ne sert de pivot à aucun dossier. Passé ces bornes, l'archivage est la
-   * seule sortie.
-   */
   async annulerCreation(agent: AgentCourant, id: string): Promise<void> {
     await this.visibilite.entiteVisibleOuIntrouvable(agent, id);
 
@@ -840,7 +732,6 @@ export class EntitesService {
     }
 
     await this.prisma.$transaction(async (transaction) => {
-      // Les clés étrangères des faits sont en RESTRICT : ils partent d'abord.
       await transaction.fait.deleteMany({ where: { sujetId: id } });
       await transaction.entite.delete({ where: { id } });
 
@@ -857,16 +748,6 @@ export class EntitesService {
     });
   }
 
-  // ─────────────────────────── Interne ───────────────────────────
-
-  /**
-   * Recompose la projection depuis les seuls faits visibles.
-   *
-   * Un champ non renseigné — ou dont tous les faits sont masqués — reste
-   * affiché, valeur nulle : l'absence d'information est une information, et
-   * rien ne doit distinguer « jamais renseigné » de « masqué », sous peine de
-   * révéler l'existence du fait caché.
-   */
   private assemblerChamps(
     definitions: DefinitionChamp[],
     faitsSujet: Fait[],
@@ -965,10 +846,7 @@ export class EntitesService {
       this.prisma.sansFiltre.typeLien.findMany({
         where: { id: { in: saisis.map((lien) => lien.typeLienId) } },
       }),
-      // Sans filtre : poser un lien vers une entité qu'on ne voit pas est
-      // impossible en pratique, l'agent ne pouvant pas en connaître
-      // l'identifiant. Filtrer ici transformerait un lien légitime posé par un
-      // agent habilité en « cible inconnue ».
+
       this.prisma.sansFiltre.entite.findMany({
         where: { id: { in: saisis.map((lien) => lien.cibleId) } },
       }),
@@ -999,13 +877,6 @@ export class EntitesService {
     });
   }
 
-  /**
-   * Contraintes de domaine du type de lien.
-   *
-   * « interpellé lors de » va de Personne vers Événement, et nulle part
-   * ailleurs. Sans ce contrôle, le graphe se remplirait d'arêtes que les
-   * filtres et les onglets ne sauraient plus placer.
-   */
   private verifierDomaine(
     typeLien: TypeLien,
     typeSujetId: string,
@@ -1024,10 +895,6 @@ export class EntitesService {
     }
   }
 
-  /**
-   * Résout la provenance d'un fait : ce qu'il porte en propre, sinon les
-   * valeurs du bandeau de source active fournies au niveau de la requête.
-   */
   private resoudreProvenance(
     saisi: {
       source?: string;
@@ -1094,11 +961,6 @@ export class EntitesService {
     return valeur.toISOString().slice(0, 10);
   }
 
-  /**
-   * Traduit les refus venus de la base en réponses lisibles.
-   *
-   * C'est la base qui refuse ; l'application se contente de dire pourquoi.
-   */
   private async executer<T>(
     contexte: {
       typeEntiteId: string;

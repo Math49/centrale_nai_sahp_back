@@ -1,12 +1,4 @@
 #!/usr/bin/env node
-// Crée une migration Prisma à partir de scripts de prisma/sql/.
-//
-// Prisma ne sait pas générer les triggers, vues et index partiels : ils vivent
-// dans prisma/sql/, qui en est la source canonique. Ce script les recopie dans
-// une migration, seule voie d'application autorisée.
-//
-// Usage :
-//   npm run sql:migration -- <nom> <fichier.sql> [autre.sql ...]
 
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
@@ -45,8 +37,7 @@ if (existsSync(dossier)) {
 
 const blocs = fichiers.map((f) => {
   const chemin = resolve(racine, f);
-  // Les éditeurs Windows écrivent volontiers un BOM. Recopié au milieu d'une
-  // migration, il devient un caractère parasite que PostgreSQL refuse.
+
   const contenu = readFileSync(chemin, 'utf8')
     .replace(/^\uFEFF/, '')
     .trimEnd();

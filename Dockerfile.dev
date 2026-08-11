@@ -1,4 +1,4 @@
-# Image de développement uniquement. L'image de production arrive au lot 12.
+
 FROM node:22-alpine
 
 WORKDIR /app

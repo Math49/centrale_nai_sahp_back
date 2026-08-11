@@ -1,10 +1,5 @@
-// Centrale N&I — schéma Prisma
-//
-// AVERTISSEMENT — ce fichier ne décrit PAS toute la base.
-// Les triggers, vues et index partiels vivent dans prisma/sql/ et sont
-// recopiés dans les migrations. Prisma ne les connaît pas : un
-// `prisma db pull` les ignore et un `prisma migrate dev` peut proposer
-// de les écraser. Voir prisma/sql/README.md et le CLAUDE.md du dépôt.
+
+
 
 generator client {
   provider        = "prisma-client-js"
@@ -17,10 +12,6 @@ datasource db {
   extensions = [pg_trgm, unaccent]
 }
 
-// ─────────────────────────────── Cœur ───────────────────────────────
-//
-// AVERTISSEMENT — la cohérence de ces tables repose sur des triggers et des
-// index partiels que Prisma ne connaît pas. Voir prisma/sql/.
 
 enum Visibilite {
   public
@@ -58,21 +49,21 @@ model Entite {
   typeEntiteId String     @map("type_entite_id") @db.Uuid
   typeEntite   TypeEntite @relation(fields: [typeEntiteId], references: [id], onDelete: Restrict)
 
-  /// Calculé depuis `type_entite.modele_libelle` par trigger. Ne jamais écrire
-  /// depuis l'application.
+  
+  
   libelle String
 
-  /// Projection des faits, maintenue par trigger. Ne jamais écrire non plus :
-  /// la vérité est dans `fait`, ceci n'en est qu'une vue matérialisée.
+  
+  
   valeurs Json @default("{}")
 
-  /// Champ libre, sans historique ni source — ce n'est pas un fait.
+  
   note String?
 
   visibilite Visibilite @default(public)
   etat       EtatEntite @default(actif)
 
-  /// Non nul si l'entité a été absorbée par une fusion (lot 11).
+  
   fusionneeVersId String?  @map("fusionnee_vers_id") @db.Uuid
   fusionneeVers   Entite?  @relation("fusion", fields: [fusionneeVersId], references: [id], onDelete: Restrict)
   absorbees       Entite[] @relation("fusion")
@@ -95,7 +86,7 @@ model Entite {
   @@map("entite")
 }
 
-/// Unité élémentaire d'information : un champ ou un lien, toujours sourcé.
+
 model Fait {
   id String @id @default(uuid()) @db.Uuid
 
@@ -117,28 +108,28 @@ model Fait {
   cibleId String? @map("cible_id") @db.Uuid
   cible   Entite? @relation("fait_cible", fields: [cibleId], references: [id], onDelete: Restrict)
 
-  /// Texte libre. Obligatoire — aucun fait sans source.
+  
   source String
 
-  /// 1 douteux · 2 à confirmer · 3 probable · 4 certain.
-  /// Entier ordonné : le maillon le plus faible d'un chemin se calcule par MIN.
+  
+  
   fiabilite Int @db.SmallInt
 
-  /// Le jour où l'information a été apprise, à ne pas confondre avec la date
-  /// portée par l'entité elle-même.
+  
+  
   dateConstatation DateTime @map("date_constatation") @db.Date
 
   etat EtatFait @default(actif)
 
   visibilite Visibilite @default(public)
 
-  /// La plus restrictive parmi la visibilité propre, celle du dossier de
-  /// saisie, du sujet et de la cible. Calculée par un trigger **BEFORE** :
-  /// en AFTER, la ligne renvoyée par le RETURNING d'un create serait périmée.
+  
+  
+  
   visibiliteEffective Visibilite @default(public) @map("visibilite_effective")
 
-  /// Dossier depuis lequel le fait a été saisi. Sert à en hériter la
-  /// visibilité et à tracer l'origine — le fait n'appartient pas au dossier.
+  
+  
   dossierId String?  @map("dossier_id") @db.Uuid
   dossier   Dossier? @relation(fields: [dossierId], references: [id], onDelete: Restrict)
 
@@ -159,8 +150,8 @@ model Fichier {
 
   nomOrigine String @map("nom_origine")
 
-  /// Identifiant opaque sur le volume. Jamais servi en statique : un
-  /// contrôleur vérifie les droits avant de renvoyer l'octet (lot 12).
+  
+  
   chemin String @unique
 
   mime   String
@@ -175,20 +166,12 @@ model Fichier {
   @@map("fichier")
 }
 
-/// Périmètre d'enquête, ancré sur une entité pivot.
-///
-/// Le dossier ne contient rien : il contextualise. `suivi` relie un dossier aux
-/// entités surveillées, et chaque fait retient son dossier de saisie uniquement
-/// pour en hériter la visibilité et tracer son origine.
-///
-/// Les routes, le panneau de dossier et la gestion du suivi arrivent au lot 8 ;
-/// la table est créée ici parce que le moteur de visibilité en dépend — un fait
-/// hérite de la visibilité de son dossier de saisie.
+
 model Dossier {
   id  String @id @default(uuid()) @db.Uuid
   nom String @unique
 
-  /// Obligatoire : un dossier sans entité pivot n'existe pas.
+  
   entitePivotId String @map("entite_pivot_id") @db.Uuid
   entitePivot   Entite @relation("dossier_pivot", fields: [entitePivotId], references: [id], onDelete: Restrict)
 
@@ -209,7 +192,7 @@ model Dossier {
   @@map("dossier")
 }
 
-/// Association dossier ↔ entité. Aucune donnée n'appartient à un dossier.
+
 model Suivi {
   dossierId String  @map("dossier_id") @db.Uuid
   dossier   Dossier @relation(fields: [dossierId], references: [id], onDelete: Cascade)
@@ -226,10 +209,7 @@ model Suivi {
   @@map("suivi")
 }
 
-/// Whitelist d'agents sur un dossier.
-///
-/// Deux tables d'habilitation distinctes plutôt qu'une table polymorphe : les
-/// clés étrangères restent réelles.
+
 model HabilitationDossier {
   dossierId String  @map("dossier_id") @db.Uuid
   dossier   Dossier @relation(fields: [dossierId], references: [id], onDelete: Cascade)
@@ -246,7 +226,7 @@ model HabilitationDossier {
   @@map("habilitation_dossier")
 }
 
-/// Whitelist d'agents sur une entité.
+
 model HabilitationEntite {
   entiteId String @map("entite_id") @db.Uuid
   entite   Entite @relation(fields: [entiteId], references: [id], onDelete: Cascade)
@@ -263,18 +243,14 @@ model HabilitationEntite {
   @@map("habilitation_entite")
 }
 
-/// Disposition mémorisée du graphe.
-///
-/// Par dossier lorsqu'un agent repositionne depuis un dossier, globalement
-/// sinon. Le repositionnement affecte tous les agents et relève d'une
-/// permission : c'est une disposition partagée, pas une préférence personnelle.
+
 model PositionGraphe {
   id String @id @default(uuid()) @db.Uuid
 
   entiteId String @map("entite_id") @db.Uuid
   entite   Entite @relation(fields: [entiteId], references: [id], onDelete: Cascade)
 
-  /// Nul pour la disposition globale.
+  
   dossierId String?  @map("dossier_id") @db.Uuid
   dossier   Dossier? @relation(fields: [dossierId], references: [id], onDelete: Cascade)
 
@@ -290,14 +266,13 @@ model PositionGraphe {
   @@map("position_graphe")
 }
 
-/// Index d'unicité des champs marqués uniques, sur valeur normalisée.
-/// Entièrement maintenu par trigger : ne jamais y écrire depuis l'application.
+
 model ValeurUnique {
   typeEntiteId      String @map("type_entite_id") @db.Uuid
   definitionChampId String @map("definition_champ_id") @db.Uuid
 
-  /// lower(unaccent(trim(...))) — sans quoi « Moralès » et « Morales »
-  /// passeraient pour deux valeurs distinctes.
+  
+  
   valeurNormalisee String @map("valeur_normalisee")
 
   entiteId String @map("entite_id") @db.Uuid
@@ -308,10 +283,6 @@ model ValeurUnique {
   @@map("valeur_unique")
 }
 
-// ───────────────────────────── Référentiel ─────────────────────────────
-//
-// Configuration du modèle métier, réservée au super-admin. Les enquêteurs
-// créent des entités et des faits, jamais des types ni des champs.
 
 enum TypeDonnee {
   texte
@@ -339,8 +310,8 @@ model TypeEntite {
   libellePluriel String @map("libelle_pluriel")
   icone          String
 
-  /// Gabarit de libellé — « {prenom} {nom} », « {plaque} ». Évite de coder en
-  /// dur la façon de nommer chaque type d'entité.
+  
+  
   modeleLibelle String @map("modele_libelle")
 
   ordre Int @default(0)
@@ -368,7 +339,7 @@ model DefinitionChamp {
   estUnique   Boolean    @default(false) @map("est_unique")
   multiple    Boolean    @default(false)
 
-  /// Valeurs autorisées d'une liste fermée. Nul pour les autres types.
+  
   options Json?
 
   ordre Int @default(0)
@@ -379,17 +350,15 @@ model DefinitionChamp {
   @@map("definition_champ")
 }
 
-/// Type de lien, spécifique plutôt que générique : « interpellé lors de »,
-/// « présent lors de », « témoin de ». La nuance est exploitable par le graphe
-/// et par les filtres, ce qu'un texte libre ne permettrait pas.
+
 model TypeLien {
   id             String @id @default(uuid()) @db.Uuid
   code           String @unique
   libelle        String
   libelleInverse String @map("libelle_inverse")
 
-  /// Contraintes de domaine : « interpellé lors de » va de Personne vers
-  /// Événement, et nulle part ailleurs.
+  
+  
   typeEntiteSourceId String     @map("type_entite_source_id") @db.Uuid
   typeEntiteSource   TypeEntite @relation("type_lien_source", fields: [typeEntiteSourceId], references: [id], onDelete: Restrict)
 
@@ -419,9 +388,7 @@ model Onglet {
   @@map("onglet")
 }
 
-/// Composition d'un onglet. Le `sens` est indispensable : l'onglet Membres du
-/// groupe affiche le côté **inverse** du lien « membre de », qui va de la
-/// personne vers le groupe.
+
 model OngletTypeLien {
   ongletId String @map("onglet_id") @db.Uuid
   onglet   Onglet @relation(fields: [ongletId], references: [id], onDelete: Cascade)
@@ -436,8 +403,7 @@ model OngletTypeLien {
   @@map("onglet_type_lien")
 }
 
-/// Grade RP porteur d'un jeu de permissions entièrement configurable.
-/// Les trois grades sont fixes ; leurs permissions ne le sont pas.
+
 model Role {
   id          String   @id @default(uuid()) @db.Uuid
   code        String   @unique
@@ -450,12 +416,11 @@ model Role {
   @@map("role")
 }
 
-/// Compte agent. N'est jamais supprimé — voir l'anonymisation, seule forme de
-/// retrait compatible avec l'invariant « rien n'est jamais supprimé ».
+
 model Agent {
   id        String @id @default(uuid()) @db.Uuid
-  /// Unique. Réécrit en valeur technique dérivée de l'id à l'anonymisation,
-  /// jamais mis à NULL, afin de libérer le matricule d'origine.
+  
+  
   matricule String @unique
   prenom    String
   nom       String
@@ -463,16 +428,16 @@ model Agent {
   roleId String @map("role_id") @db.Uuid
   role   Role   @relation(fields: [roleId], references: [id], onDelete: Restrict)
 
-  /// Indépendant du grade RP. Contournement câblé en dur, non configurable.
+  
   superAdmin Boolean @default(false) @map("super_admin")
   actif      Boolean @default(true)
 
-  /// Nul chez un compte anonymisé : aucun mot de passe ne peut alors
-  /// correspondre, l'authentification devient structurellement impossible.
+  
+  
   motDePasseHash String? @map("mot_de_passe_hash")
   doitChangerMdp Boolean @default(true) @map("doit_changer_mdp")
 
-  /// Incrémenté pour invalider immédiatement tous les jetons émis.
+  
   tokenVersion Int @default(0) @map("token_version")
 
   anonymise   Boolean   @default(false)
@@ -497,15 +462,7 @@ model Agent {
   @@map("agent")
 }
 
-/// Journal de consultation.
-///
-/// Toute lecture de fiche y laisse une trace, **y compris celle d'un
-/// super-admin**, qui est en outre marquée comme telle : sans cela, l'accès
-/// total du développeur serait le point faible du dispositif qu'il protège.
-///
-/// `derogation` distingue la lecture ordinaire de celle qui n'a été possible
-/// que par une permission dérogatoire — c'est ce que le journal existe pour
-/// rendre visible.
+
 model JournalConsultation {
   id BigInt @id @default(autoincrement())
 
@@ -530,10 +487,7 @@ model JournalConsultation {
   @@map("journal_consultation")
 }
 
-/// Journal d'audit — toute écriture, tracée par l'intercepteur.
-///
-/// Un service qui trace lui-même, avec un `avant` et un `apres` circonstanciés,
-/// prend le pas sur la trace générique : voir `ContexteJournal`.
+
 model JournalAudit {
   id BigInt @id @default(autoincrement())
 

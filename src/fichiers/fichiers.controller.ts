@@ -104,13 +104,6 @@ export class FichiersController {
     return this.fichiers.supprimer(agent, id);
   }
 
-  /**
-   * Service de l'octet.
-   *
-   * **Jamais en statique** : aucun dossier n'est exposé par le reverse proxy,
-   * et ce contrôleur vérifie l'accès à la fiche avant de renvoyer quoi que ce
-   * soit.
-   */
   @Get('fichiers/:id')
   @SansPermission()
   @ApiOperation({
@@ -129,8 +122,7 @@ export class FichiersController {
 
     reponse.setHeader('Content-Type', fichier.mime);
     reponse.setHeader('Content-Length', fichier.octets.length);
-    // `attachment` plutôt qu'`inline` : le navigateur n'exécute rien depuis
-    // l'origine de l'API, quoi qu'un dépôt ait pu contenir.
+
     reponse.setHeader(
       'Content-Disposition',
       `attachment; filename="${encodeURIComponent(fichier.nomOrigine)}"`,

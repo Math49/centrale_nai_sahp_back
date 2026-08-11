@@ -1,28 +1,13 @@
 import { BadRequestException } from '@nestjs/common';
 
-/**
- * Gabarit de libellé d'un type d'entité — « {prenom} {nom} », « {plaque} ».
- *
- * Il évite de coder en dur la façon de nommer chaque type. Le libellé lui-même
- * est recalculé par trigger à partir des faits (lot 4) ; ces fonctions servent
- * à valider un gabarit et à l'illustrer dans l'écran d'administration.
- */
-
 const PLACEHOLDER = /\{([^{}]*)\}/g;
 const CLE_VALIDE = /^[a-z][a-z0-9_]*$/;
 
-/** Clés citées par un gabarit, dans l'ordre, sans doublon. */
 export function extraireCles(modele: string): string[] {
   const cles = [...modele.matchAll(PLACEHOLDER)].map((trouve) => trouve[1]);
   return [...new Set(cles)];
 }
 
-/**
- * Vérifie la forme du gabarit, indépendamment des champs existants.
- *
- * Cette vérification-là s'applique toujours, y compris à la création d'un type
- * qui n'a encore aucun champ.
- */
 export function verifierSyntaxeGabarit(modele: string): void {
   const accoladesOuvrantes = (modele.match(/\{/g) ?? []).length;
   const accoladesFermantes = (modele.match(/\}/g) ?? []).length;
@@ -50,12 +35,6 @@ export function verifierSyntaxeGabarit(modele: string): void {
   }
 }
 
-/**
- * Vérifie que le gabarit ne cite que des champs existants.
- *
- * N'a de sens qu'une fois le type pourvu de champs : à sa création il n'en a
- * aucun, et exiger le contraire rendrait tout type impossible à créer.
- */
 export function verifierClesDuGabarit(
   modele: string,
   clesConnues: readonly string[],
@@ -75,7 +54,6 @@ export function verifierClesDuGabarit(
   }
 }
 
-/** Rend un gabarit lisible, pour l'aperçu de l'écran d'administration. */
 export function appliquerGabarit(
   modele: string,
   valeurs: Record<string, string | undefined>,

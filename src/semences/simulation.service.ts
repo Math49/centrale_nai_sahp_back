@@ -9,27 +9,6 @@ import { FaitsService } from '../faits/faits.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MadrinaService } from './madrina.service';
 
-/**
- * Jeu de données d'usage — une simulation d'activité réelle du service.
- *
- * Le parcours Madrina est le **test** de la plateforme : onze entités, tendues
- * vers une démonstration. Ce jeu-ci est l'**usage** : quatre organisations,
- * une centaine d'entités, des enquêtes qui se chevauchent, des sources de
- * qualité inégale, des faits infirmés, des fiches archivées, des dossiers
- * privés. C'est ce qu'il faut pour juger un écran, une recherche, un graphe.
- *
- * Ce qui y est délibéré, et qu'il ne faut pas « corriger » :
- *
- * - **des entités partagées entre organisations** — c'est ce qui fait tomber
- *   les signaux de recoupement et de récurrence ;
- * - **de la fiabilité inégale**, jusqu'au douteux, pour que le filtre par
- *   maillon le plus faible ait quelque chose à filtrer ;
- * - **des faits infirmés et des fiches archivées**, pour que l'historique et
- *   les archives ne soient pas vides ;
- * - **un dossier privé et des entités restreintes**, pour que le moteur de
- *   visibilité se voie à l'œil nu selon le compte utilisé.
- */
-
 interface Provenance {
   source: string;
   fiabilite: number;
@@ -84,7 +63,6 @@ const SOURCES: Record<string, Provenance> = {
   },
 };
 
-/** Personnes : prénom, nom, naissance, groupe, provenance. */
 const PERSONNES: [
   string,
   string,
@@ -119,7 +97,6 @@ const PERSONNES: [
   ['Idris', 'Traoré', '1994-05-15', null, 'informateur'],
 ];
 
-/** Véhicules : plaque, modèle, couleur, propriétaire, provenance. */
 const VEHICULES: [
   string,
   string,
@@ -149,7 +126,6 @@ const VEHICULES: [
   ['8EFG729', 'Panto', 'gris', null, 'informateur'],
 ];
 
-/** Lieux : nom, adresse, QG de, provenance. */
 const LIEUX: [string, string, string | null, keyof typeof SOURCES][] = [
   ['Villa Madrina', 'Vinewood Hills', 'madrina', 'planque'],
   ['Entrepôt Cypress', 'Cypress Flats', 'ballas', 'informateur'],
@@ -165,7 +141,6 @@ const LIEUX: [string, string, string | null, keyof typeof SOURCES][] = [
   ['Dépôt Murrieta', 'Murrieta Heights', null, 'rumeur'],
 ];
 
-/** Événements : nom, date, lieu, revendiqué par, provenance. */
 const EVENEMENTS: [
   string,
   string,
@@ -231,7 +206,6 @@ const EVENEMENTS: [
   ],
 ];
 
-/** Présences : personne, événement, nature du lien, provenance. */
 const PRESENCES: [
   string,
   string,
@@ -276,8 +250,7 @@ const PRESENCES: [
     'present_lors_de',
     'informateur2',
   ],
-  // Le fil qui traverse : Isadora est vue à un rendez-vous des Triades sans
-  // qu'aucun lien ne la rattache à un groupe.
+
   [
     'Isadora Morales',
     'Rendez-vous Del Perro',
@@ -289,7 +262,6 @@ const PRESENCES: [
   ['Zoé Marchand', 'Rendez-vous Del Perro', 'present_lors_de', 'filature'],
 ];
 
-/** Véhicules vus lors d'un événement : plaque, événement, provenance. */
 const VEHICULES_SUR_EVENEMENT: [string, string, keyof typeof SOURCES][] = [
   ['8KLM204', 'Braquage bijouterie', 'videosurveillance'],
   ['20DCC874', 'Braquage bijouterie', 'planque'],
@@ -301,8 +273,7 @@ const VEHICULES_SUR_EVENEMENT: [string, string, keyof typeof SOURCES][] = [
   ['6WXY104', 'Saisie Cypress', 'interpellation'],
   ['9PQR574', 'Livraison Docks Elysian', 'filature'],
   ['2MNO941', 'Livraison Docks Elysian', 'filature'],
-  // 8KLM204 réapparaît sur un troisième événement : c'est le véhicule qui
-  // relie trois dossiers et qui doit ressortir en récurrence.
+
   ['8KLM204', 'Rendez-vous Del Perro', 'informateur2'],
   ['5STU207', 'Rendez-vous Del Perro', 'informateur2'],
   ['8DEF332', 'Course sauvage Senora', 'rumeur'],
@@ -310,7 +281,6 @@ const VEHICULES_SUR_EVENEMENT: [string, string, keyof typeof SOURCES][] = [
   ['1BCD196', 'Rendez-vous Del Perro', 'rumeur'],
 ];
 
-/** Véhicules utilisés par un groupe : plaque, groupe, provenance. */
 const VEHICULES_DE_GROUPE: [string, string, keyof typeof SOURCES][] = [
   ['20DCC874', 'madrina', 'planque'],
   ['2FGH901', 'madrina', 'planque'],
@@ -322,7 +292,6 @@ const VEHICULES_DE_GROUPE: [string, string, keyof typeof SOURCES][] = [
   ['2MNO941', 'triades', 'filature'],
 ];
 
-/** Dossiers : nom, entité pivot, visibilité, entités suivies. */
 const DOSSIERS: [string, string, Visibilite, string[]][] = [
   [
     'Groupe Madrina',
@@ -360,7 +329,7 @@ const DOSSIERS: [string, string, Visibilite, string[]][] = [
     Visibilite.public,
     ['Braquage bijouterie', 'Braquage station Route 68', 'Autoroute Senora'],
   ],
-  // Une enquête interne : le dossier est privé, l'agent visé reste public.
+
   [
     'Contrôle interne — dossier 41',
     'Kevin Barnes',
@@ -381,12 +350,6 @@ export class SimulationService {
     private readonly dossiers: DossiersService,
   ) {}
 
-  /**
-   * Peuple une instance vierge.
-   *
-   * L'ordre suit celui d'une enquête réelle, et celui qu'impose le modèle :
-   * une entité doit exister avant qu'un lien ne la désigne.
-   */
   async peupler(auteurId: string): Promise<{ entites: number; faits: number }> {
     const { types, champs, liens } =
       await this.madrina.installerReferentiel(auteurId);
@@ -399,7 +362,6 @@ export class SimulationService {
       valeur,
     });
 
-    // ── 1. Les organisations ──
     const GROUPES: [string, string, string, string, keyof typeof SOURCES][] = [
       [
         'madrina',
@@ -434,7 +396,6 @@ export class SimulationService {
       parNom.set(nom, cree.id);
     }
 
-    // ── 2. Les lieux, dont les QG ──
     for (const [nom, adresse, groupe, source] of LIEUX) {
       const cree = await this.entites.creer(auteur, {
         typeEntiteId: types.lieu,
@@ -448,7 +409,6 @@ export class SimulationService {
       parNom.set(nom, cree.id);
     }
 
-    // ── 3. Les personnes, rattachées à leur groupe ──
     for (const [prenom, nom, naissance, groupe, source] of PERSONNES) {
       const cree = await this.entites.creer(auteur, {
         typeEntiteId: types.personne,
@@ -466,7 +426,6 @@ export class SimulationService {
       parNom.set(`${prenom} ${nom}`, cree.id);
     }
 
-    // ── 4. Les véhicules et leurs propriétaires ──
     for (const [plaque, modele, couleur, proprietaire, source] of VEHICULES) {
       const cree = await this.entites.creer(auteur, {
         typeEntiteId: types.vehicule,
@@ -501,7 +460,6 @@ export class SimulationService {
       });
     }
 
-    // ── 5. Les événements ──
     for (const [nom, date, lieu, revendique, source] of EVENEMENTS) {
       const liensEvenement = [
         { typeLienId: liens.situe_a, cibleId: parNom.get(lieu)! },
@@ -520,7 +478,6 @@ export class SimulationService {
       parNom.set(nom, cree.id);
 
       if (revendique) {
-        // Une revendication n'est pas une constatation : elle reste douteuse.
         await this.faits.creer(auteur, {
           sujetId: cree.id,
           nature: 'lien',
@@ -531,7 +488,6 @@ export class SimulationService {
       }
     }
 
-    // ── 6. Ce qui relie les gens et les véhicules aux événements ──
     for (const [personne, evenement, type, source] of PRESENCES) {
       await this.faits.creer(auteur, {
         sujetId: parNom.get(personne)!,
@@ -552,7 +508,6 @@ export class SimulationService {
       });
     }
 
-    // ── 7. Les dossiers, leur suivi et leurs habilitations ──
     for (const [nom, pivot, visibilite, suivis] of DOSSIERS) {
       const dossier = await this.dossiers.creer(auteurId, {
         nom,
@@ -585,16 +540,10 @@ export class SimulationService {
     return { entites, faits };
   }
 
-  /**
-   * Ce qui rend le jeu vivant plutôt que régulier : un fait infirmé, une fiche
-   * archivée, des entités classées. Sans cela, l'historique, les archives et le
-   * moteur de visibilité resteraient vides à l'écran.
-   */
   private async marquerLesExceptions(
     auteur: AgentCourant,
     parNom: Map<string, string>,
   ): Promise<void> {
-    // Un lien contredit par la vidéosurveillance.
     const aInfirmer = await this.prisma.sansFiltre.fait.findFirst({
       where: {
         sujetId: parNom.get('Kevin Barnes'),
@@ -611,15 +560,12 @@ export class SimulationService {
       );
     }
 
-    // Une fiche qui n'a plus lieu d'être suivie.
     const aArchiver = parNom.get('Dépôt Murrieta');
 
     if (aArchiver) {
       await this.entites.changerEtat(auteur, aArchiver, 'archive');
     }
 
-    // Deux entités classées : le moteur de visibilité doit se voir à l'œil nu
-    // selon le compte utilisé.
     for (const [nom, niveau] of [
       ['Motel Pink Cage', Visibilite.restreint],
       ['Blanchisserie Chinatown', Visibilite.prive],
@@ -632,7 +578,6 @@ export class SimulationService {
     }
   }
 
-  /** Reconstitue l'agent courant depuis son compte, comme le fait le garde. */
   private async resoudreAuteur(id: string): Promise<AgentCourant> {
     const agent = await this.prisma.sansFiltre.agent.findUniqueOrThrow({
       where: { id },

@@ -1,21 +1,8 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma, TypeDonnee, type DefinitionChamp } from '@prisma/client';
 
-/**
- * Validation dynamique des valeurs de champs.
- *
- * Le schéma de validation n'existe pas à la compilation : il se construit à la
- * volée depuis `definition_champ`, que le super-admin configure. C'est le rôle
- * que la conception technique confie au « pipe de validation dynamique » ;
- * l'implémenter en service plutôt qu'en pipe permet de le solliciter aussi
- * depuis la création d'entité, où les champs arrivent par lots.
- */
 @Injectable()
 export class ValidationDynamiqueService {
-  /**
-   * Vérifie une valeur contre sa définition et la renvoie normalisée, prête à
-   * être stockée en jsonb.
-   */
   valider(champ: DefinitionChamp, valeur: unknown): Prisma.InputJsonValue {
     const nommer = (probleme: string): never => {
       throw new BadRequestException(`${champ.libelle} : ${probleme}`);
@@ -86,7 +73,6 @@ export class ValidationDynamiqueService {
     }
   }
 
-  /** Les valeurs autorisées d'une liste fermée. */
   optionsDe(champ: DefinitionChamp): string[] {
     if (!Array.isArray(champ.options)) {
       return [];
@@ -97,13 +83,6 @@ export class ValidationDynamiqueService {
     );
   }
 
-  /**
-   * Vérifie que tous les champs obligatoires du type sont pourvus.
-   *
-   * Contrôlé à la création de l'entité seulement : un champ rendu obligatoire
-   * après coup ne doit pas rendre inéditables les fiches déjà saisies, qui
-   * resteraient sinon bloquées sans qu'aucun agent puisse les corriger.
-   */
   verifierObligatoires(
     champsDuType: DefinitionChamp[],
     fournis: string[],

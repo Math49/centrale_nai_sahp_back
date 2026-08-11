@@ -19,10 +19,6 @@ import {
   type Compte,
 } from './aide-comptes';
 
-/**
- * Recette du lot 9 : le chemin entre Isadora Morales et la villa apparaît, et
- * un lien masqué rend le chemin **inexistant** plutôt que masqué.
- */
 describe('Lot 9 — graphe (e2e)', () => {
   let application: INestApplication;
   let serveur: Server;
@@ -138,8 +134,6 @@ describe('Lot 9 — graphe (e2e)', () => {
         (noeud) => noeud.libelle === 'Tyron Banks',
       )!;
 
-      // Tyron tient à Madrina, à son véhicule et aux deux braquages ; seuls
-      // Madrina et le véhicule sont déjà à l'écran.
       expect(tyron.voisinsNonAffiches).toBeGreaterThan(0);
     });
 
@@ -161,7 +155,6 @@ describe('Lot 9 — graphe (e2e)', () => {
         voisinage(junior, entites.madrina, 2, 4),
       ]);
 
-      // La revendication du braquage par Madrina est « à confirmer ».
       expect(certaines.aretes.length).toBeLessThan(toutes.aretes.length);
       expect(certaines.aretes.every((arete) => arete.fiabilite >= 4)).toBe(
         true,
@@ -181,8 +174,6 @@ describe('Lot 9 — graphe (e2e)', () => {
       expect(libelles[0]).toBe('Isadora Morales');
       expect(libelles[libelles.length - 1]).toBe('Villa Madrina');
 
-      // Le trajet passe par un de ses véhicules puis par un braquage : c'est
-      // le rapprochement, et personne ne l'a tracé.
       expect(libelles.some((libelle) => libelle.startsWith('Braquage'))).toBe(
         true,
       );
@@ -193,8 +184,6 @@ describe('Lot 9 — graphe (e2e)', () => {
 
       expect(resultat.plusCourt).not.toBeNull();
 
-      // Deux sauts au minimum : véhicule puis événement. Un seul signifierait
-      // qu'un agent a tracé le lien à la main, ce que le parcours interdit.
       expect(resultat.plusCourt!.longueur).toBeGreaterThanOrEqual(3);
 
       const libelles = resultat.plusCourt!.noeuds.map((noeud) => noeud.libelle);
@@ -213,8 +202,6 @@ describe('Lot 9 — graphe (e2e)', () => {
     });
 
     it('signale Tyron et les braquages comme récurrences', async () => {
-      // Un dossier par braquage : Tyron relie alors des entités appartenant à
-      // des dossiers différents.
       const madrina = await dossiers.creer(superAdmin.id, {
         nom: 'Madrina',
         entitePivotId: entites.madrina,
@@ -243,7 +230,6 @@ describe('Lot 9 — graphe (e2e)', () => {
       const avant = await chemin(junior, entites.isadora, entites.villa);
       expect(avant.plusCourt).not.toBeNull();
 
-      // On soustrait le braquage de la bijouterie, qui est sur le trajet.
       await request(serveur)
         .patch(`/entites/${entites.braquageBijouterie}`)
         .set(enTantQue(superAdmin))
@@ -252,8 +238,6 @@ describe('Lot 9 — graphe (e2e)', () => {
 
       const apres = await chemin(junior, entites.isadora, entites.villa);
 
-      // Le second braquage relie encore Isadora à Tyron : un chemin subsiste,
-      // mais il est plus long.
       expect(apres.plusCourt).not.toBeNull();
       expect(apres.plusCourt!.longueur).toBeGreaterThanOrEqual(
         avant.plusCourt!.longueur,
@@ -274,8 +258,6 @@ describe('Lot 9 — graphe (e2e)', () => {
 
       const resultat = await chemin(junior, entites.isadora, entites.villa);
 
-      // Aucun chemin — et surtout pas « un chemin existe mais vous n'y avez
-      // pas droit », qui serait déjà l'avoir dit.
       expect(resultat.plusCourt).toBeNull();
       expect(resultat.plusSolide).toBeNull();
     });
@@ -333,8 +315,6 @@ describe('Lot 9 — graphe (e2e)', () => {
       const vue = await voisinage(junior, entites.madrina, 1);
       const madrina = vue.noeuds.find((noeud) => noeud.id === entites.madrina)!;
 
-      // Le repositionnement affecte tous les agents : c'est une disposition
-      // partagée, pas une préférence personnelle.
       expect(madrina.x).toBe(120);
       expect(madrina.y).toBe(240);
     });

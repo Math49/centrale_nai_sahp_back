@@ -1,18 +1,3 @@
-/**
- * Peuplement initial du référentiel — types d'entités, champs, types de liens,
- * onglets. **Aucune donnée d'enquête.**
- *
- *   npm run referentiel:initial
- *
- * C'est la commande de mise en service : une instance vierge n'a pas de modèle
- * métier, et sans lui aucun agent ne peut rien saisir. `npm run
- * semences:madrina` fait la même installation *plus* le parcours de référence,
- * ce qui n'a de sens qu'en développement et en recette.
- *
- * Idempotente : elle ne touche à rien si des types existent déjà. Le référentiel
- * se modifie ensuite depuis l'administration, par un super-admin, et non en
- * rejouant cette commande.
- */
 import { NestFactory } from '@nestjs/core';
 
 import { AppModule } from '../app.module';
@@ -44,8 +29,6 @@ async function executer(): Promise<void> {
       return;
     }
 
-    // La création d'un type porte une clé étrangère vers son auteur : il faut
-    // un compte réel, et seul un super-admin crée des types.
     const auteur = await prisma.agent.findFirst({
       where: { superAdmin: true, actif: true, anonymise: false },
       orderBy: { creeLe: 'asc' },

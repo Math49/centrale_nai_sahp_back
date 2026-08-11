@@ -17,13 +17,6 @@ import { SemencesModule } from './semences/semences.module';
 import { SignauxModule } from './signaux/signaux.module';
 import { VisibiliteModule } from './visibilite/visibilite.module';
 
-/**
- * Modules métier à venir, dans l'ordre des lots :
- *   lot 4  entites, faits, fichiers
- *   lot 8  dossiers — routes et panneau ; le noyau existe depuis le lot 5
- *   lot 9  graphe
- *   lot 11 journal — consultation, intercepteur générique, routes de lecture
- */
 @Module({
   imports: [
     ConfigurationModule,

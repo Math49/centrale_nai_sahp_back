@@ -24,8 +24,6 @@ const CODE = /^[a-z][a-z0-9_]*$/;
 const MESSAGE_CODE =
   'minuscules, chiffres et tirets bas, commençant par une lettre';
 
-// ───────────────────────────── Lecture ─────────────────────────────
-
 export class DefinitionChampDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
   @ApiProperty({ format: 'uuid' }) typeEntiteId!: string;
@@ -94,8 +92,6 @@ export class ReferentielDto {
   @ApiProperty({ type: [TypeEntiteDto] }) typesEntites!: TypeEntiteDto[];
   @ApiProperty({ type: [TypeLienDto] }) typesLiens!: TypeLienDto[];
 }
-
-// ───────────────────────────── Écriture ─────────────────────────────
 
 export class CreationTypeEntiteDto {
   @ApiProperty({ example: 'vehicule' })
@@ -368,7 +364,6 @@ export class ResultatApercuDto {
   @ApiProperty({ type: [String] }) clesCitees!: string[];
 }
 
-/** Utilisé par les écrans d'administration pour proposer un ordre. */
 export class PositionDto {
   @ApiProperty()
   @IsInt()

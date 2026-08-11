@@ -6,11 +6,6 @@ import { AgentsService } from '../src/agents/agents.service';
 import { RolesService } from '../src/agents/roles.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 
-/**
- * Outillage commun aux tests d'intégration : remise à zéro de la base de test
- * et création de comptes prêts à l'emploi.
- */
-
 const TABLES = [
   'journal_audit',
   'valeur_unique',
@@ -44,10 +39,6 @@ export interface Compte {
 
 const MOT_DE_PASSE = 'mot-de-passe-de-recette';
 
-/**
- * Crée un compte, le connecte et lève son changement de mot de passe imposé.
- * Renvoie un jeton directement utilisable.
- */
 export async function creerCompteActif(
   application: INestApplication,
   options: {

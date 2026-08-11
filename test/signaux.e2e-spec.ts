@@ -24,15 +24,6 @@ import {
   type Compte,
 } from './aide-comptes';
 
-/**
- * Recette du lot 10 : le signal de récurrence sur le véhicule 8KLM apparaît
- * **sans intervention**, et disparaît pour un agent non habilité.
- *
- * Les deux moitiés comptent autant l'une que l'autre. La première dit que la
- * centrale rapproche seule ; la seconde, qu'elle ne rapproche que sur ce que
- * l'agent a le droit de voir — un signal est un raccourci vers une information,
- * et un raccourci vers ce qui est masqué en révélerait l'existence.
- */
 describe('Lot 10 — signaux et accueil (e2e)', () => {
   let application: INestApplication;
   let serveur: Server;
@@ -129,9 +120,6 @@ describe('Lot 10 — signaux et accueil (e2e)', () => {
     await madrina.installerReferentiel(superAdmin.id);
     entites = await madrina.peuplerParcours(superAdmin.id);
 
-    // Deux enquêtes ouvertes séparément, comme dans le parcours de l'annexe B :
-    // personne ne les rapproche, et surtout personne n'a tracé de lien entre
-    // Isadora Morales et Tyron Banks.
     const enquete = await dossiers.creer(superAdmin.id, {
       nom: 'Groupe Madrina',
       entitePivotId: entites.madrina,
@@ -164,8 +152,6 @@ describe('Lot 10 — signaux et accueil (e2e)', () => {
     it('signale le véhicule 8KLM204 en récurrence, sans intervention', async () => {
       const liste = await signaux(junior);
 
-      // Le Sultan relie le braquage, suivi par l'enquête Madrina, à sa
-      // propriétaire, pivot d'une autre enquête. Aucun agent ne l'a rapproché.
       expect(surLeVehicule(liste, 'recurrence')).toBe(true);
 
       const signal = liste.find(
@@ -193,8 +179,6 @@ describe('Lot 10 — signaux et accueil (e2e)', () => {
     });
 
     it('se tait quand les pivots des deux dossiers sont déjà reliés', async () => {
-      // Tyron et son véhicule : le rapprochement est connu, le dire à nouveau
-      // n'apprendrait rien.
       const banks = await dossiers.creer(superAdmin.id, {
         nom: 'Banks',
         entitePivotId: entites.tyron,
@@ -229,8 +213,6 @@ describe('Lot 10 — signaux et accueil (e2e)', () => {
 
       const liste = await signaux(junior);
 
-      // Ni le signal, ni une mention de signal masqué : le second dossier
-      // n'existe pas pour cet agent.
       expect(surLeVehicule(liste, 'recurrence')).toBe(false);
       expect(surLeVehicule(liste, 'recoupement')).toBe(false);
     });
@@ -254,8 +236,6 @@ describe('Lot 10 — signaux et accueil (e2e)', () => {
     });
 
     it('ne recoupe jamais sur un dossier dont le contenu est fermé', async () => {
-      // Restreint : le dossier reste visible, son suivi non. Le recoupement
-      // dirait qui il surveille.
       await request(serveur)
         .patch(`/dossiers/${dossierMorales}`)
         .set(enTantQue(etatMajor))
@@ -286,10 +266,6 @@ describe('Lot 10 — signaux et accueil (e2e)', () => {
         false,
       );
 
-      // Les faits « à confirmer » du parcours datent d'aujourd'hui. On les
-      // vieillit de deux mois — en désarmant le trigger d'horodatage, qui
-      // réécrirait `modifie_le` à `now()` : c'est la base qui garantit qu'un
-      // fait ne peut pas se déclarer revu sans l'avoir été.
       const vieux = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
 
       await prisma.sansFiltre.$executeRawUnsafe(
@@ -318,8 +294,6 @@ describe('Lot 10 — signaux et accueil (e2e)', () => {
         (signal) => signal.famille === 'vieillissement',
       )!;
 
-      // Reprendre le fait, ne serait-ce que pour en corriger la source, suffit
-      // à le sortir du signal : c'est le geste que le signal appelle.
       await request(serveur)
         .patch(`/faits/${cible.faitId}`)
         .set(enTantQue(senior))

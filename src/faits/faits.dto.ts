@@ -30,7 +30,6 @@ export class CreationFaitDto {
   @IsUUID()
   definitionChampId?: string;
 
-  // Voir ChampSaisiDto : la forme dépend du champ visé, validée à l'exécution.
   @Allow()
   @ApiPropertyOptional({
     oneOf: [{ type: 'string' }, { type: 'number' }, { type: 'boolean' }],
@@ -113,14 +112,6 @@ export class ModificationFaitDto {
   visibilite?: Visibilite;
 }
 
-/**
- * Le motif d'une infirmation.
- *
- * Obligatoire : infirmer sans dire pourquoi laisserait la relecture du dossier
- * devant un fait disparu sans explication. Il vit dans le journal d'audit, pas
- * sur le fait — c'est une circonstance du geste, pas une propriété de
- * l'information.
- */
 export class InfirmationDto {
   @ApiProperty({ description: 'Ce qui contredit le fait' })
   @IsString()

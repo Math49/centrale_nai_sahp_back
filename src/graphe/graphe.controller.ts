@@ -121,8 +121,6 @@ export class GrapheController {
   @Post('positions')
   @Permissions(PERMISSIONS.GRAPHE_REPOSITIONNER)
   @HttpCode(HttpStatus.NO_CONTENT)
-  // Déplacer un nœud ne touche pas à l'information d'enquête : tracer chaque
-  // glissement de souris noierait le journal, qui existe pour être relu.
   @HorsAudit()
   @ApiOperation({
     summary: 'Disposition mémorisée',

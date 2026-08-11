@@ -4,7 +4,6 @@ import {
   reconnaitreFormat,
 } from './formats-image';
 
-/** Un segment JPEG : marqueur, longueur sur deux octets, charge utile. */
 function segment(marqueur: number, charge: Uint8Array): Buffer {
   const entete = Buffer.alloc(4);
   entete[0] = 0xff;
@@ -14,7 +13,7 @@ function segment(marqueur: number, charge: Uint8Array): Buffer {
 }
 
 function jpeg(options: { exif?: boolean; commentaire?: boolean } = {}): Buffer {
-  const morceaux: Uint8Array[] = [Buffer.from([0xff, 0xd8])]; // SOI
+  const morceaux: Uint8Array[] = [Buffer.from([0xff, 0xd8])];
 
   morceaux.push(segment(0xe0, Buffer.from('JFIF\0\0\0')));
 
@@ -28,7 +27,6 @@ function jpeg(options: { exif?: boolean; commentaire?: boolean } = {}): Buffer {
     morceaux.push(segment(0xfe, Buffer.from('Appareil de service n°4')));
   }
 
-  // SOS puis données compressées, jusqu'à EOI.
   morceaux.push(Buffer.from([0xff, 0xda, 0x00, 0x08, 1, 1, 0, 0, 0]));
   morceaux.push(Buffer.from([0x12, 0x34, 0x56, 0xff, 0xd9]));
 
@@ -38,7 +36,7 @@ function jpeg(options: { exif?: boolean; commentaire?: boolean } = {}): Buffer {
 function blocPng(type: string, charge: Uint8Array): Buffer {
   const longueur = Buffer.alloc(4);
   longueur.writeUInt32BE(charge.length);
-  // Le CRC n'est pas vérifié par le nettoyage : quatre octets suffisent.
+
   return Buffer.concat([
     longueur,
     Buffer.from(type, 'ascii'),
@@ -101,7 +99,6 @@ describe('reconnaissance du format', () => {
   });
 
   it('refuse ce qui n’est pas une image acceptée', () => {
-    // Un exécutable Windows, qu'une extension .jpg ne rendrait pas inoffensif.
     const executable = Buffer.concat([
       Buffer.from('MZ'),
       Buffer.alloc(64, 0x90),
@@ -136,9 +133,8 @@ describe('nettoyage des métadonnées', () => {
   it('garde le JFIF et les données compressées intactes', () => {
     const propre = nettoyerMetadonnees(jpeg({ exif: true }), 'image/jpeg');
 
-    // Le JFIF ne décrit que la densité : le retirer changerait le rendu.
     expect(propre.includes(Buffer.from('JFIF'))).toBe(true);
-    // Les octets d'image ne sont pas touchés — aucun réencodage.
+
     expect(propre.includes(Buffer.from([0x12, 0x34, 0x56, 0xff, 0xd9]))).toBe(
       true,
     );
@@ -164,7 +160,7 @@ describe('nettoyage des métadonnées', () => {
 
     expect(porteDesMetadonnees(propre, 'image/webp')).toBe(false);
     expect(propre.includes(Buffer.from('GPS 48.85N'))).toBe(false);
-    // Un conteneur qui annoncerait une taille fausse serait illisible.
+
     expect(propre.readUInt32LE(4)).toBe(propre.length - 8);
     expect(reconnaitreFormat(propre)).toBe('image/webp');
   });

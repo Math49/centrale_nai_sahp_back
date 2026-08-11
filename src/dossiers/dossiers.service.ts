@@ -17,17 +17,6 @@ import type {
   RattachementDto,
 } from './dossiers.dto';
 
-/**
- * Dossiers — noyau posé au lot 5, exposé au lot 8.
- *
- * Le moteur de visibilité en dépend : un fait hérite de la visibilité de son
- * dossier de saisie, et la règle des gardiens compte le dossier parmi les
- * quatre objets à franchir. Les routes, le panneau de dossier et la gestion du
- * suivi viennent au lot 8 ; ce service porte ce qu'il faut pour que la
- * visibilité soit vérifiable dès maintenant.
- *
- * **Le dossier ne contient rien.** Il contextualise.
- */
 @Injectable()
 export class DossiersService {
   constructor(
@@ -66,8 +55,6 @@ export class DossiersService {
           },
         });
 
-        // Le pivot est suivi par son dossier dès la création : c'est ce qui
-        // rend « ouvrir le dossier » équivalent à « ouvrir sa fiche ».
         await transaction.suivi.create({
           data: {
             dossierId: dossier.id,
@@ -90,7 +77,6 @@ export class DossiersService {
         return dossier;
       });
 
-      // Le pivot entre dans le suivi : les récurrences en dépendent.
       this.bus.signaler();
       return cree;
     } catch (erreur) {
@@ -104,13 +90,6 @@ export class DossiersService {
     }
   }
 
-  /**
-   * Change la visibilité d'un dossier.
-   *
-   * La cascade en base recalcule aussitôt la visibilité effective de tous les
-   * faits saisis depuis ce dossier : c'est le cas de référence — l'entité reste
-   * publique, le dossier passe en privé, et tout ce qui en vient disparaît.
-   */
   async definirVisibilite(
     agentId: string,
     id: string,
@@ -141,8 +120,6 @@ export class DossiersService {
       },
     );
 
-    // La cascade en base a déjà recalculé les visibilités effectives ; le
-    // graphe en mémoire, lui, les porte en copie et doit être rechargé.
     this.bus.signaler();
     return apresTransaction;
   }
@@ -163,7 +140,6 @@ export class DossiersService {
     this.bus.signaler();
   }
 
-  /** Whitelist : l'habilitation est nominative, jamais déduite d'un grade. */
   async habiliter(
     accordePar: string,
     dossierId: string,
@@ -214,7 +190,6 @@ export class DossiersService {
     });
   }
 
-  /** Habilitation nominative sur une entité, l'autre whitelist. */
   async habiliterSurEntite(
     accordePar: string,
     entiteId: string,
@@ -240,8 +215,6 @@ export class DossiersService {
     });
   }
 
-  // ─────────────────────────── Lecture ───────────────────────────
-
   async lister(agent: AgentCourant): Promise<DossierResumeDto[]> {
     const client = this.visibilite.clientPour(agent);
 
@@ -258,13 +231,6 @@ export class DossiersService {
     );
   }
 
-  /**
-   * Panneau de dossier.
-   *
-   * Il n'est atteignable que par l'entrée du dossier : une fiche ouverte
-   * directement n'en montre rien. Sur un dossier restreint sans habilitation,
-   * le nom s'affiche et le reste se tait — objet visible, contenu fermé.
-   */
   async panneau(agent: AgentCourant, id: string): Promise<PanneauDossierDto> {
     const controle = await this.visibilite.dossierVisibleOuIntrouvable(
       agent,
@@ -291,8 +257,6 @@ export class DossiersService {
 
     const client = this.visibilite.clientPour(agent);
 
-    // Le suivi est filtré : une entité privée surveillée par ce dossier ne doit
-    // pas se révéler à qui n'y est pas habilité.
     const [entitesVisibles, suivis, habilitations] = await Promise.all([
       client.entite.findMany({
         where: { suivis: { some: { dossierId: id } } },
@@ -335,12 +299,6 @@ export class DossiersService {
     };
   }
 
-  /**
-   * Dossiers qui suivent une entité, tels qu'ils s'affichent sur sa fiche.
-   *
-   * Une entité peut appartenir à plusieurs dossiers, et la fiche l'indique.
-   * Filtré : un dossier privé n'apparaît pas, sans mention.
-   */
   async rattachements(
     agent: AgentCourant,
     entiteId: string,
@@ -359,8 +317,6 @@ export class DossiersService {
       estPivot: dossier.entitePivotId === entiteId,
     }));
   }
-
-  // ─────────────────────────── Écriture ───────────────────────────
 
   async modifier(
     agent: AgentCourant,
@@ -419,12 +375,6 @@ export class DossiersService {
     this.bus.signaler();
   }
 
-  /**
-   * Classer un objet en restreint ou privé est une permission à part.
-   *
-   * La règle vit dans `VisibiliteService`, avec toutes les autres décisions de
-   * visibilité ; ce relais existe pour les appelants historiques.
-   */
   verifierDroitDeClasser(agent: AgentCourant, visibilite: Visibilite): void {
     this.visibilite.verifierDroitDeClasser(agent, visibilite);
   }
@@ -433,8 +383,6 @@ export class DossiersService {
     agent: AgentCourant,
     dossierId: string,
   ): Promise<number> {
-    // Le décompte passe par le client filtré : afficher un total exhaustif
-    // révélerait l'existence des entités masquées.
     return this.visibilite.clientPour(agent).entite.count({
       where: { suivis: { some: { dossierId } } },
     });

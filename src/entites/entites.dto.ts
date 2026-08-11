@@ -23,17 +23,9 @@ import {
   ValidateNested,
 } from 'class-validator';
 
-/** 1 douteux · 2 à confirmer · 3 probable · 4 certain. */
 export const FIABILITE_MIN = 1;
 export const FIABILITE_MAX = 4;
 
-/**
- * Source, fiabilité et date de constatation, portées par chaque fait.
- *
- * Facultatives fait par fait : le bandeau de source active de l'écran de saisie
- * en fournit les valeurs par défaut au niveau de la requête, et l'agent ne
- * corrige que les exceptions.
- */
 export class ProvenanceDto {
   @ApiPropertyOptional({ example: "Rapport d'intervention n°2291" })
   @IsOptional()
@@ -65,9 +57,6 @@ export class ChampSaisiDto extends ProvenanceDto {
   @IsUUID()
   definitionChampId!: string;
 
-  // La forme attendue dépend du champ visé et ne se connaît qu'à l'exécution :
-  // c'est ValidationDynamiqueService qui tranche. `@Allow()` empêche seulement
-  // le pipe global de retirer la propriété au titre du whitelist.
   @Allow()
   @ApiProperty({
     oneOf: [{ type: 'string' }, { type: 'number' }, { type: 'boolean' }],
@@ -140,22 +129,12 @@ export class ModificationEntiteDto {
   visibilite?: Visibilite;
 }
 
-/**
- * Fusion de doublons.
- *
- * L'entité de l'URL est **absorbée**, celle-ci est conservée. Le sens est celui
- * de la colonne `fusionnee_vers_id` : « fusionner cette fiche vers celle-là ».
- */
 export class FusionDto {
   @ApiProperty({ format: 'uuid', description: 'La fiche qui subsiste' })
   @IsUUID()
   versId!: string;
 }
 
-// ───────────────────────────── Lecture ─────────────────────────────
-
-/** Valeur d'un champ telle qu'elle sort de l'API : scalaire, ou tableau si le
- *  champ est multiple. */
 const VALEUR_LUE: ApiPropertyOptions = {
   nullable: true,
   oneOf: [

@@ -16,7 +16,6 @@ interface AgentTrace {
   anonymise: boolean;
 }
 
-/** Lecture des journaux, et liste des entités orphelines. */
 @Injectable()
 export class JournalService {
   constructor(
@@ -123,13 +122,6 @@ export class JournalService {
     });
   }
 
-  /**
-   * Entités orphelines — sans aucun lien actif.
-   *
-   * Une coupure brutale pendant une saisie en cascade peut en laisser. L'étude
-   * du besoin en veut une **liste discrète en administration**, et surtout pas
-   * un signal sur l'accueil : ce n'est pas un rapprochement, c'est du ménage.
-   */
   async orphelines(agent: AgentCourant): Promise<EntiteOrphelineDto[]> {
     const entites = await this.visibilite.clientPour(agent).entite.findMany({
       where: {
@@ -157,10 +149,6 @@ export class JournalService {
     }));
   }
 
-  /**
-   * Le journal désigne un agent par son `id`, jamais par son matricule ni son
-   * nom : le libellé se recalcule à la lecture, et disparaît avec le compte.
-   */
   private nommer(agent: AgentTrace | null): string {
     if (!agent) {
       return 'la plateforme';
@@ -169,7 +157,6 @@ export class JournalService {
     return agent.anonymise ? 'agent supprimé' : `${agent.prenom} ${agent.nom}`;
   }
 
-  /** Libellés des cibles d'audit, lus **filtrés** : ce qui est masqué le reste. */
   private async libellesDesCibles(
     agent: AgentCourant,
     entrees: { cibleTable: string; cibleId: string | null }[],
@@ -237,5 +224,4 @@ export class JournalService {
   }
 }
 
-/** Le typage Prisma des JSON de trace, exposé pour les tests. */
 export type ValeurTracee = Prisma.JsonValue;

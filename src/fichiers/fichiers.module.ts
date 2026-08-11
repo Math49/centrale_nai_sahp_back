@@ -12,9 +12,6 @@ import { FichiersService } from './fichiers.service';
     MulterModule.registerAsync({
       inject: [ConfigService],
       useFactory: (configuration: ConfigService<Environnement, true>) => ({
-        // En mémoire : le fichier doit être reconnu et nettoyé **avant**
-        // d'atteindre le volume. Un stockage sur disque écrirait d'abord et
-        // vérifierait ensuite, ce qui laisserait passer l'original.
         storage: memoryStorage(),
         limits: {
           fileSize:

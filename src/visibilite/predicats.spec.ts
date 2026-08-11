@@ -61,9 +61,6 @@ describe('règle des gardiens', () => {
 
     describe('exige TOUS les gardiens, jamais un seul', () => {
       it('refuse si un seul des deux gardiens est franchi', () => {
-        // Le cas de fuite décrit par la conception : être habilité sur le
-        // dossier Madrina ne doit pas ouvrir un fait pointant vers une entité
-        // privée d'une autre enquête.
         expect(
           contenuAccessible(enqueteur, [
             gardien(PRIVE, true),
@@ -111,9 +108,6 @@ describe('règle des gardiens', () => {
       });
 
       it('la dérogation privée ouvre aussi le restreint', () => {
-        // Traiter les deux dérogations comme indépendantes produirait
-        // l'absurdité d'un agent autorisé sur le privé mais bloqué sur le
-        // restreint, qui est moins sensible.
         expect(
           contenuAccessible(contexte({ derogationPrive: true }), [
             gardien(RESTREINT),
@@ -196,7 +190,6 @@ describe('prédicats de requête', () => {
     });
 
     it('n’ouvre au fait lui-même que les niveaux dérogés', () => {
-      // Aucune whitelist ne porte sur un fait : seule une dérogation l'ouvre.
       const sansDerogation = predicatFait(enqueteur).OR?.[1]?.AND as Record<
         string,
         unknown

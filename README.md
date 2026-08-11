@@ -35,6 +35,9 @@ docker compose -f docker-compose.dev.yml up
 ```
 
 L'API écoute sur `http://localhost:3000`, la base sur `localhost:5432`.
+pgAdmin est disponible sur `http://localhost:5050` avec
+`admin@centrale-ni.local` / `admin`. Pour y enregistrer la base :
+`postgres:5432`, base `centrale_ni`, utilisateur `ni`, mot de passe `ni`.
 Les migrations sont appliquées au démarrage du conteneur `api`.
 
 Vérification :
@@ -66,6 +69,9 @@ processus.
 
 Les arguments sont positionnels et non nommés — npm intercepte les options
 longues qu'il ne connaît pas, même après `--`.
+
+En production Docker, cette création est automatisée au premier démarrage du
+conteneur `api` à partir des variables `SUPER_ADMIN_*` de `.env.production`.
 
 ### Données de développement
 
@@ -189,11 +195,18 @@ Le processus refuse de démarrer si l'une manque ou est mal formée.
 | --- | --- | --- |
 | `NODE_ENV` | `development` | |
 | `PORT` | `3000` | |
+| `API_IMAGE` | — | image Docker API tirée par Portainer |
+| `FRONT_IMAGE` | — | image Docker front tirée par Portainer |
 | `DATABASE_URL` | — | obligatoire |
 | `CORS_ORIGINES` | `http://localhost:3001` | liste séparée par des virgules |
 | `SWAGGER_ACTIF` | `true` | expose `/documentation` |
 | `JWT_SECRET` | — | obligatoire, 32 caractères minimum |
 | `JWT_DUREE` | `7d` | validité du jeton **et** du cookie qui le porte |
+| `SUPER_ADMIN_MATRICULE` | — | premier super-admin, requis en production tant qu'aucun n'existe |
+| `SUPER_ADMIN_PRENOM` | — | prénom du premier super-admin |
+| `SUPER_ADMIN_NOM` | — | nom du premier super-admin |
+| `SUPER_ADMIN_MOT_DE_PASSE` | — | mot de passe initial, 12 caractères minimum |
+| `SUPER_ADMIN_GRADE` | `etat_major` | grade du premier super-admin |
 | `COOKIE_SECURE` | `false` | `true` en production — cookie refusé hors HTTPS |
 | `COOKIE_DOMAINE` | — | vide en développement : le navigateur retient l'hôte exact |
 | `VIEILLISSEMENT_JOURS` | `30` | seuil du signal de vieillissement, en jours |
@@ -209,26 +222,39 @@ prévue pour l'hôte.
 
 ## Mise en production
 
-Quatre services et une tâche de sauvegarde : `postgres`, `api`, `front`,
-`proxy`. Le front est construit depuis le dépôt voisin, désigné par
-`CHEMIN_FRONT`.
+Cinq services et une tâche de sauvegarde : `postgres`, `pgadmin`, `api`,
+`front`, `proxy`. `api` et `front` sont des images GHCR construites par les
+workflows GitHub Actions ; `postgres`, `pgadmin` et `proxy` utilisent leurs
+images officielles.
 
 ```bash
 cp .env.production.example .env.production
-# renseigner DOMAINE, les mots de passe et le secret JWT, puis :
-docker compose --env-file .env.production up -d --build
+# renseigner DOMAINE, API_IMAGE, FRONT_IMAGE, les mots de passe,
+# le secret JWT et SUPER_ADMIN_*, puis :
+docker compose --env-file .env.production up -d
 ```
+
+Dans Portainer, créer une stack depuis `docker-compose.yml`, reprendre les
+variables de `.env.production`, et configurer l'accès au registry GHCR si les
+images sont privées.
+
+Secrets GitHub attendus :
+
+- dépôt back : `PORTAINER_WEBHOOK` facultatif.
+- dépôt front : `NEXT_PUBLIC_API_URL` obligatoire, par exemple
+  `https://centrale-ni.exemple.fr/api`, et `PORTAINER_WEBHOOK` facultatif.
 
 Le DNS doit pointer sur la machine **avant** le premier démarrage : Caddy
 obtient son certificat Let's Encrypt tout seul, et échouera sinon.
 
-Puis, une seule fois :
+Au démarrage, le conteneur `api` applique les migrations puis crée le premier
+super-admin depuis `SUPER_ADMIN_*` si aucun super-admin actif n'existe encore.
+Aucune autre donnée de production n'est seedée automatiquement.
 
-```bash
-docker compose --env-file .env.production exec api \
-  npx ts-node -r tsconfig-paths/register src/commandes/creer-super-admin.ts 2291 Prénom Nom
-docker compose --env-file .env.production exec api npm run referentiel:initial
-```
+pgAdmin écoute uniquement sur `127.0.0.1:${PGADMIN_PORT:-5050}`. Depuis une
+machine distante, ouvrir un tunnel SSH vers ce port. Dans pgAdmin, la base se
+joint par `postgres:5432` avec les valeurs `POSTGRES_USER`, `POSTGRES_PASSWORD`
+et `POSTGRES_DB` du fichier `.env.production`.
 
 **Instance unique, et c'est structurel.** Le graphe vit en mémoire dans le
 processus Nest. Toute mise à l'échelle horizontale exigerait de sortir le cache

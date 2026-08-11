@@ -29,11 +29,6 @@ import {
   type Compte,
 } from './aide-comptes';
 
-/**
- * Recette du lot 11 : un fait infirmé sort du graphe et reste consultable dans
- * l'historique ; une fusion redirige sans perte ; une consultation super-admin
- * apparaît signalée dans le journal.
- */
 describe('Lot 11 — traçabilité et cycle de vie (e2e)', () => {
   let application: INestApplication;
   let serveur: Server;
@@ -160,8 +155,6 @@ describe('Lot 11 — traçabilité et cycle de vie (e2e)', () => {
     await application?.close();
   });
 
-  // ──────────────────────────── Infirmation ────────────────────────────
-
   describe('un fait infirmé sort du graphe et reste consultable', () => {
     let faitInfirme: string;
 
@@ -214,8 +207,6 @@ describe('Lot 11 — traçabilité et cycle de vie (e2e)', () => {
         entites.braquageFourgon,
       );
 
-      // Le lien direct a disparu. Un autre chemin peut subsister, mais plus
-      // celui-là.
       expect(apres.plusCourt?.longueur ?? 99).toBeGreaterThan(1);
     });
 
@@ -255,12 +246,8 @@ describe('Lot 11 — traçabilité et cycle de vie (e2e)', () => {
       const apres = await fiche(senior, entites.buffalo);
       const champPlaque = apres.champs.find((champ) => champ.cle === 'plaque')!;
 
-      // La projection ignore les faits non actifs : la base fait le travail,
-      // sans que l'application ait à défaire quoi que ce soit.
       expect(champPlaque.valeur).toBeNull();
 
-      // Et la plaque redevient attribuable, puisque `valeur_unique` se
-      // recalcule par entité.
       await request(serveur)
         .post('/entites')
         .set(enTantQue(senior))
@@ -288,15 +275,11 @@ describe('Lot 11 — traçabilité et cycle de vie (e2e)', () => {
     });
   });
 
-  // ────────────────────────────── Fusion ──────────────────────────────
-
   describe('une fusion redirige sans perte', () => {
     let doublon: string;
     let dossierId: string;
 
     beforeAll(async () => {
-      // Un second « Tyron Banks », saisi par un agent qui ne voyait pas le
-      // premier — le doublon que l'étude annonce comme inévitable.
       const cree = await request(serveur)
         .post('/entites')
         .set(enTantQue(senior))
@@ -366,8 +349,6 @@ describe('Lot 11 — traçabilité et cycle de vie (e2e)', () => {
 
       const apres = await fiche(senior, entites.tyron);
 
-      // Le lien du doublon vers le braquage de la bijouterie est passé sur la
-      // fiche conservée : rien ne se perd.
       expect(apres.liens.length).toBeGreaterThan(avant.liens.length);
 
       const [suivi, habilitation, pivot] = await Promise.all([
@@ -423,8 +404,6 @@ describe('Lot 11 — traçabilité et cycle de vie (e2e)', () => {
     });
   });
 
-  // ──────────────────────────── Consultation ────────────────────────────
-
   describe('une consultation super-admin apparaît signalée', () => {
     it('journalise toute lecture de fiche', async () => {
       await fiche(junior, entites.madrina);
@@ -455,8 +434,6 @@ describe('Lot 11 — traçabilité et cycle de vie (e2e)', () => {
         .send({ visibilite: Visibilite.prive })
         .expect(200);
 
-      // L'État-Major n'y est pas habilité nommément : il passe par sa
-      // dérogation, et c'est exactement ce que le journal doit rendre visible.
       await fiche(etatMajor, entites.bijouterie);
 
       const derogatoires = await consultations(etatMajor, {
@@ -499,9 +476,6 @@ describe('Lot 11 — traçabilité et cycle de vie (e2e)', () => {
     });
 
     it('ne lie pas la liste de ménage au relevé des consultations', async () => {
-      // Le Senior n'a pas `journal.consulter` mais peut archiver : la liste des
-      // orphelines lui est ouverte, et le journal reste fermé. Confier l'une ne
-      // doit pas obliger à confier l'autre.
       await request(serveur)
         .get('/journal/orphelines')
         .set(enTantQue(senior))
@@ -514,8 +488,6 @@ describe('Lot 11 — traçabilité et cycle de vie (e2e)', () => {
     });
   });
 
-  // ────────────────────── Intercepteur et orphelines ──────────────────────
-
   describe('l’intercepteur', () => {
     it('trace une écriture même quand le service ne trace pas lui-même', async () => {
       const dossier = await dossiers.creer(superAdmin.id, {
@@ -523,8 +495,6 @@ describe('Lot 11 — traçabilité et cycle de vie (e2e)', () => {
         entitePivotId: entites.autoroute,
       });
 
-      // `POST /dossiers/:id/suivi` n'écrit aucune trace circonstanciée : c'est
-      // l'intercepteur qui doit rattraper, sans que personne y ait pensé.
       await request(serveur)
         .post(`/dossiers/${dossier.id}/suivi`)
         .set(enTantQue(senior))
@@ -578,8 +548,6 @@ describe('Lot 11 — traçabilité et cycle de vie (e2e)', () => {
 
       const apres = await audit(etatMajor, {});
 
-      // Une requête refusée n'a rien produit : la journaliser laisserait croire
-      // à un geste qui n'a pas eu lieu.
       expect(apres.length).toBe(avant.length);
     });
   });
@@ -614,8 +582,6 @@ describe('Lot 11 — traçabilité et cycle de vie (e2e)', () => {
 
       expect(listee.some((entite) => entite.id === id)).toBe(true);
 
-      // Et surtout : elle ne remonte pas en signal sur l'accueil. Ce n'est pas
-      // un rapprochement, c'est du ménage.
       const accueil = (
         await request(serveur)
           .get('/accueil')

@@ -24,7 +24,6 @@ import {
 
 const RACINE = process.env.FICHIERS_RACINE ?? './donnees/fichiers';
 
-/** Un JPEG minimal portant un segment EXIF avec des coordonnées. */
 function jpegAvecExif(): Buffer {
   const exif = Buffer.from('Exif\0\0MM*GPSLatitude 34.0522N 118.2437W');
   const entete = Buffer.alloc(4);
@@ -41,10 +40,6 @@ function jpegAvecExif(): Buffer {
   ]);
 }
 
-/**
- * Recette du service de fichiers, lot 12 : nom opaque, type vérifié sur le
- * contenu, taille plafonnée, métadonnées retirées, jamais servi en statique.
- */
 describe('Lot 12 — fichiers (e2e)', () => {
   let application: INestApplication;
   let serveur: Server;
@@ -137,7 +132,7 @@ describe('Lot 12 — fichiers (e2e)', () => {
 
       expect(depose.mime).toBe('image/jpeg');
       expect(depose.nomOrigine).toBe('planque-06-08.jpg');
-      // L'image a maigri de tout son EXIF.
+
       expect(depose.taille).toBeLessThan(avec.length);
     });
 
@@ -150,7 +145,7 @@ describe('Lot 12 — fichiers (e2e)', () => {
 
       expect(porteDesMetadonnees(octets, 'image/jpeg')).toBe(false);
       expect(octets.includes(Buffer.from('GPSLatitude'))).toBe(false);
-      // Les données compressées, elles, sont intactes : aucun réencodage.
+
       expect(octets.includes(Buffer.from([0x12, 0x34, 0x56]))).toBe(true);
     });
 
@@ -159,7 +154,6 @@ describe('Lot 12 — fichiers (e2e)', () => {
         where: { id: depose.id },
       });
 
-      // Rien du nom d'origine, de l'entité ni de l'auteur ne transparaît.
       expect(enBase.chemin).not.toContain('planque');
       expect(enBase.chemin).not.toContain(entites.villa);
       expect(enBase.chemin).not.toContain(senior.id);
@@ -228,7 +222,6 @@ describe('Lot 12 — fichiers (e2e)', () => {
         .send({ visibilite: Visibilite.prive })
         .expect(200);
 
-      // 404, jamais 403 : un refus confirmerait l'existence de la fiche.
       await request(serveur)
         .post(`/entites/${entites.bijouterie}/fichiers`)
         .set(enTantQue(junior))
@@ -243,7 +236,6 @@ describe('Lot 12 — fichiers (e2e)', () => {
         where: { id: depose.id },
       });
 
-      // Le chemin sur le volume n'est pas une route : rien ne l'expose.
       await request(serveur)
         .get(`/${enBase.chemin.replace(/\\/g, '/')}`)
         .set(enTantQue(senior))
@@ -262,7 +254,7 @@ describe('Lot 12 — fichiers (e2e)', () => {
 
       expect(reponse.headers['content-type']).toBe('image/jpeg');
       expect(reponse.headers['x-content-type-options']).toBe('nosniff');
-      // En pièce jointe : le navigateur n'exécute rien depuis l'origine de l'API.
+
       expect(reponse.headers['content-disposition']).toContain('attachment');
       expect(porteDesMetadonnees(reponse.body as Buffer, 'image/jpeg')).toBe(
         false,
@@ -289,7 +281,6 @@ describe('Lot 12 — fichiers (e2e)', () => {
         .set(enTantQue(junior))
         .expect(404);
 
-      // L'État-Major dispose de la dérogation : pour lui, l'image existe.
       await request(serveur)
         .get(`/fichiers/${id}`)
         .set(enTantQue(etatMajor))
@@ -327,8 +318,6 @@ describe('Lot 12 — fichiers (e2e)', () => {
         where: { id: depose.id },
       });
 
-      // Le chemin est la seule chose qui protège le volume : il ne se relit
-      // nulle part, pas même dans un journal réservé à l'État-Major.
       expect(serialise).not.toContain(enBase.chemin.replace(/\\/g, '\\\\'));
     });
 

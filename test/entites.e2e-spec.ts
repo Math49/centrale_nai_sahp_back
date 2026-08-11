@@ -20,11 +20,6 @@ import {
   type Compte,
 } from './aide-comptes';
 
-/**
- * Recette du lot 4 : un véhicule et son propriétaire, le lien lisible depuis
- * les deux fiches sans duplication, la plaque en double refusée, et la
- * projection des valeurs correcte après modification d'un fait.
- */
 describe('Lot 4 — entités et faits (e2e)', () => {
   let application: INestApplication;
   let serveur: Server;
@@ -181,7 +176,6 @@ describe('Lot 4 — entités et faits (e2e)', () => {
 
       expect(fiche.libelle).toBe('20DCC874 — Komoda');
 
-      // On remet le gabarit d'origine pour la suite des tests.
       await request(serveur)
         .patch(`/referentiel/types-entites/${referentiel.types.vehicule}`)
         .set(enTantQue(superAdmin))
@@ -217,7 +211,7 @@ describe('Lot 4 — entités et faits (e2e)', () => {
 
       expect(couleur.faits).toHaveLength(2);
       expect(couleur.multiSources).toBe(true);
-      // Aucune revalorisation automatique : la valeur reste celle du meilleur fait.
+
       expect(couleur.valeur).toBe('noir');
     });
   });
@@ -444,7 +438,6 @@ describe('Lot 4 — entités et faits (e2e)', () => {
     });
 
     it('refuse un lien hors de son domaine', async () => {
-      // « propriétaire de » va de Personne vers Véhicule.
       await request(serveur)
         .post('/faits')
         .set(enTantQue(junior))
@@ -483,8 +476,6 @@ describe('Lot 4 — entités et faits (e2e)', () => {
     });
 
     it('refuse à un junior de créer une entité sans la permission', async () => {
-      // Le junior a bien entite.creer ; on vérifie l'inverse sur l'archivage,
-      // que seul un Senior obtient.
       const lieu = (
         (
           await creerEntite(junior, {
@@ -568,7 +559,6 @@ describe('Lot 4 — entités et faits (e2e)', () => {
         liens: [{ typeLienId: referentiel.liens.membre_de, cibleId: groupe }],
       }).expect(201);
 
-      // Annuler ici laisserait un lien pendant : l'archivage est la sortie.
       await request(serveur)
         .post(`/entites/${groupe}/annuler-creation`)
         .set(enTantQue(junior))
@@ -621,8 +611,6 @@ describe('Lot 4 — entités et faits (e2e)', () => {
     let entites: Record<string, string>;
 
     beforeAll(async () => {
-      // On repart d'une base vierge d'entités : le parcours pose ses propres
-      // plaques, dont l'unicité entrerait en conflit avec les tests précédents.
       await prisma.$executeRawUnsafe(
         'TRUNCATE TABLE valeur_unique, fait, entite RESTART IDENTITY CASCADE',
       );

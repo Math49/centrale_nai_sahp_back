@@ -54,15 +54,6 @@ export class ReferentielService {
     private readonly audit: JournalAuditService,
   ) {}
 
-  // ─────────────────────────── Lecture ───────────────────────────
-
-  /**
-   * Catalogue complet en une requête.
-   *
-   * Le front en dérive tous ses formulaires et toutes ses fiches : le découper
-   * en plusieurs appels l'obligerait à recomposer, et à connaître l'ordre des
-   * dépendances entre types, champs, liens et onglets.
-   */
   async catalogue(): Promise<ReferentielDto> {
     const [typesEntites, typesLiens] = await Promise.all([
       this.prisma.typeEntite.findMany({
@@ -84,14 +75,10 @@ export class ReferentielService {
     };
   }
 
-  // ─────────────────────── Types d'entités ───────────────────────
-
   async creerTypeEntite(
     auteurId: string,
     donnees: CreationTypeEntiteDto,
   ): Promise<TypeEntiteDto> {
-    // À la création, le type n'a aucun champ : seule la forme du gabarit est
-    // vérifiable. Les clés le seront à la première modification.
     verifierSyntaxeGabarit(donnees.modeleLibelle);
 
     const cree = await this.executer(() =>
@@ -227,8 +214,6 @@ export class ReferentielService {
     return { apercu: appliquerGabarit(modele, exemples), clesCitees };
   }
 
-  // ───────────────────────────── Champs ─────────────────────────────
-
   async creerChamp(
     auteurId: string,
     donnees: CreationChampDto,
@@ -318,8 +303,6 @@ export class ReferentielService {
       throw new NotFoundException('champ inconnu');
     }
 
-    // Un gabarit qui cite un champ disparu produirait des libellés troués sur
-    // toutes les fiches du type.
     if (extraireCles(champ.typeEntite.modeleLibelle).includes(champ.cle)) {
       throw new ConflictException(
         `le gabarit de libellé du type cite « ${champ.cle} » — le corriger d'abord`,
@@ -368,8 +351,6 @@ export class ReferentielService {
     });
   }
 
-  // ─────────────────────────── Types de liens ───────────────────────────
-
   async creerTypeLien(
     auteurId: string,
     donnees: CreationTypeLienDto,
@@ -416,10 +397,6 @@ export class ReferentielService {
     if (!avant) {
       throw new NotFoundException('type de lien inconnu');
     }
-
-    // Les contraintes de domaine ne se modifient pas : des liens déjà posés les
-    // respectent, et les changer les invaliderait rétroactivement. Créer un
-    // autre type de lien est la voie prévue.
 
     const apres = await this.executer(() =>
       this.prisma.$transaction(async (transaction) => {
@@ -471,8 +448,6 @@ export class ReferentielService {
       }),
     );
   }
-
-  // ───────────────────────────── Onglets ─────────────────────────────
 
   async creerOnglet(
     auteurId: string,
@@ -566,14 +541,6 @@ export class ReferentielService {
     });
   }
 
-  /**
-   * Remplace la composition d'un onglet.
-   *
-   * C'est ici que se joue la règle du sens : un onglet appartient à un type
-   * d'entité, et n'affiche un type de lien que du côté où ce type d'entité se
-   * trouve. L'onglet Membres du groupe montre le côté **inverse** de « membre
-   * de », qui va de la personne vers le groupe.
-   */
   async composerOnglet(
     auteurId: string,
     id: string,
@@ -652,8 +619,6 @@ export class ReferentielService {
 
     return this.presenterOnglet(apres);
   }
-
-  // ───────────────────────────── Interne ─────────────────────────────
 
   private async chargerTypeEntite(id: string): Promise<TypeEntiteComplet> {
     const type = await this.prisma.typeEntite.findUnique({
@@ -744,7 +709,6 @@ export class ReferentielService {
     return (resultat._max.ordre ?? -1) + 1;
   }
 
-  /** Traduit les violations de contrainte en réponses lisibles. */
   private async executer<T>(action: () => Promise<T>): Promise<T> {
     try {
       return await action();

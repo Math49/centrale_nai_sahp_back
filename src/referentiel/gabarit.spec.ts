@@ -32,7 +32,6 @@ describe('gabarit de libellé', () => {
     });
 
     it('refuse un gabarit sans aucune référence de champ', () => {
-      // Sinon toutes les fiches du type porteraient le même libellé.
       expect(() => verifierSyntaxeGabarit('Véhicule')).toThrow(
         /sans référence de champ/,
       );
@@ -57,8 +56,6 @@ describe('gabarit de libellé', () => {
     });
 
     it('laisse passer tant que le type n’a aucun champ', () => {
-      // À la création, le type n'a pas encore de champ : exiger le contraire
-      // rendrait tout type impossible à créer.
       expect(() => verifierClesDuGabarit('{plaque}', [])).not.toThrow();
     });
   });

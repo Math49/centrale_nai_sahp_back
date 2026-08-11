@@ -1,9 +1,4 @@
 #!/usr/bin/env node
-// Écrit le contrat OpenAPI dans openapi.json sans démarrer de serveur HTTP.
-//
-// Le fichier produit est versionné dans le dépôt front, qui en dérive son
-// client typé. Règle de déploiement : quand le contrat change, le back se
-// déploie avant le front.
 
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';

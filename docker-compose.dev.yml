@@ -18,6 +18,21 @@ services:
       timeout: 5s
       retries: 20
 
+  pgadmin:
+    image: dpage/pgadmin4:8
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@centrale-ni.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - '5050:80'
+    volumes:
+      - pgadmin_donnees:/var/lib/pgadmin
+
   api:
     build:
       context: .
@@ -26,38 +41,34 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    # Ces valeurs font autorité : le .env de l'hôte est visible dans le
-    # conteneur par le montage, mais les variables réelles le supplantent.
-    # Toute variable ajoutée à src/config/environnement.ts doit être reprise ici.
+
+
     environment:
       NODE_ENV: development
       PORT: '3000'
       DATABASE_URL: postgresql://ni:ni@postgres:5432/centrale_ni?schema=public
       CORS_ORIGINES: http://localhost:3001
       SWAGGER_ACTIF: 'true'
-      # Secret de développement, sans valeur : la production reçoit le sien
-      # par le fichier d'environnement du serveur (lot 12).
+
+
       JWT_SECRET: developpement-uniquement-secret-sans-valeur-32c
       JWT_DUREE: 7d
-      # En clair sur localhost : le cookie ne peut pas exiger HTTPS.
+
       COOKIE_SECURE: 'false'
-      # Un fait « à confirmer » non revu au-delà de ce délai remonte en signal.
+
       VIEILLISSEMENT_JOURS: 30
       FICHIERS_RACINE: /app/donnees/fichiers
       FICHIER_TAILLE_MAX_MO: 8
     ports:
       - '3000:3000'
     volumes:
-      # Le code est monté ; node_modules reste celui de l'image, pour ne pas
-      # mélanger les binaires natifs de l'hôte et du conteneur.
-      #
-      # dist/ n'est volontairement pas un volume : `nest build` efface le
-      # dossier de sortie avant de compiler, et un point de montage ne peut pas
-      # être supprimé — le conteneur redémarrerait en boucle sur EBUSY.
+
+
       - .:/app
       - modules_api:/app/node_modules
     command: sh -c "npx prisma migrate deploy && npx prisma generate && npm run start:dev"
 
 volumes:
   donnees_postgres:
+  pgadmin_donnees:
   modules_api:

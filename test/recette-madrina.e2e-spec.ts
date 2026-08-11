@@ -17,22 +17,6 @@ import {
   type Compte,
 } from './aide-comptes';
 
-/**
- * **Recette d'ensemble du projet.**
- *
- * Sur une instance vierge, le parcours Madrina de l'annexe B est rejoué de bout
- * en bout — par l'API, comme un agent le ferait, et non par les services — et
- * doit faire ressortir Isadora Morales **sans qu'aucun lien direct n'ait été
- * tracé entre elle et Tyron Banks**.
- *
- * C'est le critère de réussite énoncé par l'étude du besoin et repris par la
- * conception technique. Tout le reste — le modèle, la visibilité, le graphe,
- * les signaux — n'existe que pour rendre ce moment possible.
- *
- * Le parcours est joué par un **Junior**, avec la répartition initiale des
- * permissions : si la recette demandait un État-Major, la plateforme ne
- * servirait pas à ceux pour qui elle est faite.
- */
 describe('Recette d’ensemble — le parcours Madrina', () => {
   let application: INestApplication;
   let serveur: Server;
@@ -47,7 +31,6 @@ describe('Recette d’ensemble — le parcours Madrina', () => {
   let champs: Record<string, string>;
   let liens: Record<string, string>;
 
-  /** Identifiants des entités, au fur et à mesure de la saisie. */
   const fiches: Record<string, string> = {};
 
   const enTantQue = (compte: Compte) => ({
@@ -59,7 +42,6 @@ describe('Recette d’ensemble — le parcours Madrina', () => {
     valeur,
   });
 
-  /** Crée une entité par l'API, comme le ferait le formulaire dynamique. */
   const saisir = async (
     nom: string,
     corps: Record<string, unknown>,
@@ -118,8 +100,6 @@ describe('Recette d’ensemble — le parcours Madrina', () => {
     await application?.close();
   });
 
-  // ─────────────────────────── Mise en service ───────────────────────────
-
   describe('mise en service d’une instance vierge', () => {
     it('part d’une base sans rien', async () => {
       const [entites, typesEntites, agents] = await Promise.all([
@@ -160,7 +140,6 @@ describe('Recette d’ensemble — le parcours Madrina', () => {
     });
 
     it('installe le référentiel, et rien d’autre', async () => {
-      // Le même chemin de code que `npm run referentiel:initial`.
       const installe = await application
         .get(MadrinaService)
         .installerReferentiel(superAdmin.id);
@@ -173,8 +152,6 @@ describe('Recette d’ensemble — le parcours Madrina', () => {
       expect(await prisma.sansFiltre.entite.count()).toBe(0);
     });
   });
-
-  // ──────────────────────── Le parcours, en saisie ────────────────────────
 
   describe('le parcours de l’annexe B, saisi par un Junior', () => {
     it('1 — un informateur signale un nouveau groupe', async () => {
@@ -268,7 +245,7 @@ describe('Recette d’ensemble — le parcours Madrina', () => {
           {
             typeLienId: liens.revendique_par,
             cibleId: fiches.madrina,
-            // Une revendication n'est pas une constatation.
+
             source: 'Rumeur relayée par un informateur',
             fiabilite: 2,
             dateConstatation: '2026-08-08',
@@ -385,12 +362,8 @@ describe('Recette d’ensemble — le parcours Madrina', () => {
     });
   });
 
-  // ──────────────────────────── Le critère ────────────────────────────
-
   describe('le critère de réussite', () => {
     it('AUCUN fait ne relie Isadora Morales à Tyron Banks', async () => {
-      // La vérification porte sur toute la base, sans filtre : c'est la clause
-      // que tout le reste doit respecter, et elle ne souffre pas d'exception.
       const direct = await prisma.sansFiltre.fait.count({
         where: {
           OR: [
@@ -413,8 +386,6 @@ describe('Recette d’ensemble — le parcours Madrina', () => {
       expect(etapes[0]).toBe('Isadora Morales');
       expect(etapes[etapes.length - 1]).toBe('Tyron Banks');
 
-      // Le trajet passe par un de ses véhicules, puis par un événement où
-      // Tyron apparaît. Personne n'a tracé ce rapprochement.
       expect(
         etapes.some(
           (libelle) => libelle === '8KLM204' || libelle === '4RTQ118',
@@ -443,7 +414,6 @@ describe('Recette d’ensemble — le parcours Madrina', () => {
     });
 
     it('Isadora ressort seule, par le signal de récurrence', async () => {
-      // Deux enquêtes ouvertes séparément, sans que personne ne les rapproche.
       const enquete = await dossiers.creer(agent.id, {
         nom: 'Groupe Madrina',
         entitePivotId: fiches.madrina,
@@ -467,7 +437,6 @@ describe('Recette d’ensemble — le parcours Madrina', () => {
         surLeSultan.some((signal) => signal.famille === 'recurrence'),
       ).toBe(true);
 
-      // Et les deux dossiers de l'agent lui sont rendus.
       expect(accueil.mesDossiers.map((dossier) => dossier.id).sort()).toEqual(
         [enquete.id, morales.id].sort(),
       );
@@ -488,8 +457,6 @@ describe('Recette d’ensemble — le parcours Madrina', () => {
       expect(vue.noeuds.map((noeud) => noeud.libelle)).toContain('Tyron Banks');
     });
   });
-
-  // ────────────────────── Ce que la plateforme a tenu ──────────────────────
 
   describe('les invariants, sur le parcours réel', () => {
     it('aucun fait n’existe sans source', async () => {
@@ -519,7 +486,6 @@ describe('Recette d’ensemble — le parcours Madrina', () => {
         (lien) => lien.autreEntite.id === fiches.madrina,
       )!;
 
-      // Le même fait, vu depuis ses deux extrémités : un seul en base.
       expect(depuisLeGroupe.faitId).toBe(depuisLaPersonne.faitId);
       expect(depuisLeGroupe.sens).not.toBe(depuisLaPersonne.sens);
     });
@@ -561,8 +527,6 @@ describe('Recette d’ensemble — le parcours Madrina', () => {
           .expect(200)
       ).body as { action: string; agentId: string | null }[];
 
-      // Le filtre est une recherche par sous-chaîne : « type_entite.creer »,
-      // tracé à l'installation du référentiel, y répond aussi.
       const creations = traces.filter(
         (trace) => trace.action === 'entite.creer',
       );
@@ -595,9 +559,6 @@ describe('Recette d’ensemble — le parcours Madrina', () => {
     });
 
     it('la répartition initiale des permissions suffit à tout le parcours', () => {
-      // Le parcours entier vient d'être saisi par un Junior. S'il avait fallu
-      // un État-Major, la plateforme ne servirait pas ceux pour qui elle est
-      // faite.
       expect(Object.keys(fiches)).toHaveLength(11);
     });
   });

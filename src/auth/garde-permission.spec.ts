@@ -68,8 +68,6 @@ describe('GardePermission', () => {
         },
       );
 
-      // Le contournement du super-admin porte sur les permissions, pas sur
-      // l'oubli de décorateur : celui-ci reste un défaut à corriger.
       expect(() => garde.canActivate(contexte)).toThrow(ForbiddenException);
     });
   });

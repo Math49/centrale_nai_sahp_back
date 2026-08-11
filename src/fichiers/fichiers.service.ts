@@ -26,19 +26,6 @@ import {
   reconnaitreFormat,
 } from './formats-image';
 
-/**
- * Dépôt et service des images.
- *
- * Quatre règles, toutes de la conception §11 :
- *
- * - **jamais servi en statique** — l'octet passe par un contrôleur qui vérifie
- *   les droits, jamais par un dossier exposé par le reverse proxy ;
- * - **nom opaque** — le chemin sur le volume ne dit rien du contenu ni de son
- *   auteur, et le nom d'origine reste en base pour l'affichage ;
- * - **type vérifié sur le contenu** — une extension est une déclaration ;
- * - **métadonnées retirées** — une photo porte souvent des coordonnées que
- *   personne n'a décidé de verser au dossier.
- */
 @Injectable()
 export class FichiersService implements OnModuleInit {
   private readonly journal = new Logger(FichiersService.name);
@@ -62,12 +49,6 @@ export class FichiersService implements OnModuleInit {
     );
   }
 
-  /**
-   * Dépose une image sur une entité.
-   *
-   * L'entité passe par le contrôle de visibilité : déposer sur une fiche qu'on
-   * ne voit pas reviendrait à en confirmer l'existence.
-   */
   async deposer(
     agent: AgentCourant,
     entiteId: string,
@@ -95,8 +76,6 @@ export class FichiersService implements OnModuleInit {
 
     const propre = nettoyerMetadonnees(depot.octets, format);
 
-    // Relecture après nettoyage : mieux vaut vérifier que faire confiance.
-    // Un dépôt qui garderait ses coordonnées ne doit pas atteindre le volume.
     if (porteDesMetadonnees(propre, format)) {
       this.journal.error(
         `métadonnées persistantes après nettoyage — dépôt refusé (${format})`,
@@ -130,8 +109,7 @@ export class FichiersService implements OnModuleInit {
           action: 'fichier.deposer',
           cibleTable: 'fichier',
           cibleId: cree.id,
-          // Ni le chemin ni les octets : le journal se consulte, et le chemin
-          // opaque est la seule chose qui protège le volume.
+
           apres: {
             entiteId,
             mime: cree.mime,
@@ -148,7 +126,6 @@ export class FichiersService implements OnModuleInit {
     return this.presenter(fichier);
   }
 
-  /** Les images d'une entité, si l'agent a accès à la fiche. */
   async lister(agent: AgentCourant, entiteId: string): Promise<FichierDto[]> {
     await this.visibilite.entiteVisibleOuIntrouvable(agent, entiteId);
 
@@ -205,12 +182,6 @@ export class FichiersService implements OnModuleInit {
     }
   }
 
-  /**
-   * Renvoie l'octet — après contrôle, jamais avant.
-   *
-   * 404 et non 403 sur une entité inaccessible : un refus confirmerait
-   * l'existence de la fiche à laquelle l'image est rattachée.
-   */
   async telecharger(
     agent: AgentCourant,
     id: string,
@@ -227,9 +198,6 @@ export class FichiersService implements OnModuleInit {
 
     const absolu = join(this.racine(), fichier.chemin);
 
-    // Le chemin vient de la base et non de la requête, mais on vérifie qu'il
-    // reste sous la racine : une seule ligne, et la traversée devient
-    // impossible même si la colonne était un jour alimentée autrement.
     if (!resolve(absolu).startsWith(resolve(this.racine()))) {
       throw new NotFoundException('fichier inconnu');
     }
@@ -248,13 +216,6 @@ export class FichiersService implements OnModuleInit {
     }
   }
 
-  /**
-   * Nom opaque, réparti en sous-dossiers.
-   *
-   * Rien n'y transparaît — ni le nom d'origine, ni l'entité, ni l'auteur, ni la
-   * date. Les deux premiers octets servent de sous-dossier pour qu'un volume de
-   * plusieurs milliers d'images reste manipulable.
-   */
   private cheminOpaque(format: keyof typeof EXTENSIONS): string {
     const aleatoire = randomBytes(16).toString('hex');
 

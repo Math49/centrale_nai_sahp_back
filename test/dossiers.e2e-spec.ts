@@ -26,10 +26,6 @@ import {
   type Compte,
 } from './aide-comptes';
 
-/**
- * Recette du lot 8 : une entité suivie par deux dossiers apparaît dans les deux
- * sans duplication, et la mention du double rattachement s'affiche sur sa fiche.
- */
 describe('Lot 8 — dossiers (e2e)', () => {
   let application: INestApplication;
   let serveur: Server;
@@ -194,7 +190,6 @@ describe('Lot 8 — dossiers (e2e)', () => {
         .send({ nom: 'Repérage Vespucci', entitePivotId: idRival })
         .expect(201);
 
-      // Ce qu'il n'a pas, c'est le droit de le soustraire aux autres.
       await request(serveur)
         .patch(`/dossiers/${(reponse.body as PanneauDossierDto).id}`)
         .set(enTantQue(junior))
@@ -203,8 +198,6 @@ describe('Lot 8 — dossiers (e2e)', () => {
     });
 
     it('exige visibilite.definir pour classer un dossier', async () => {
-      // Le Senior n'a pas cette permission : sans elle, tout agent pourrait
-      // soustraire une enquête au regard des autres.
       const reponse = await request(serveur)
         .post('/dossiers')
         .set(enTantQue(senior))

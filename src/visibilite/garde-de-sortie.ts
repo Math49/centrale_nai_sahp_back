@@ -12,18 +12,6 @@ import { mergeMap } from 'rxjs/operators';
 import type { AgentCourant, RequeteAuthentifiee } from '../auth/agent-courant';
 import { VisibiliteService } from './visibilite.service';
 
-/**
- * Garde de sortie — deuxième des trois couches de défense.
- *
- * Il inspecte chaque objet sérialisé avant qu'il ne quitte l'API et redemande à
- * la base si l'agent y avait droit. **Redondance assumée** : le filtre de
- * requête est censé suffire, et c'est justement pourquoi il faut un second
- * regard — une fuite de renseignement ne se rattrape pas.
- *
- * Une incohérence n'est pas rattrapée en silence : elle lève une erreur et
- * s'écrit dans les journaux. Masquer discrètement laisserait le défaut de
- * filtrage vivre, et la prochaine route l'exposerait autrement.
- */
 @Injectable()
 export class GardeDeSortie implements NestInterceptor {
   private readonly journal = new Logger(GardeDeSortie.name);
@@ -49,7 +37,6 @@ export class GardeDeSortie implements NestInterceptor {
     );
   }
 
-  /** Publique pour être vérifiable directement, sans passer par une route. */
   async verifierCharge(
     agent: AgentCourant,
     charge: unknown,
@@ -57,7 +44,6 @@ export class GardeDeSortie implements NestInterceptor {
   ): Promise<void> {
     const releve = this.relever(charge);
 
-    // Tout ce qui est public sort sans question : le cas courant ne coûte rien.
     if (releve.faits.size === 0 && releve.entites.size === 0) {
       return;
     }
@@ -87,13 +73,6 @@ export class GardeDeSortie implements NestInterceptor {
     );
   }
 
-  /**
-   * Relève les identifiants à vérifier.
-   *
-   * On ne contrôle que ce qui n'est pas public : un objet dont la visibilité
-   * effective est publique est accessible à tout agent connecté, par
-   * construction du calcul en base.
-   */
   private relever(charge: unknown): {
     faits: Set<string>;
     entites: Set<string>;
@@ -113,8 +92,6 @@ export class GardeDeSortie implements NestInterceptor {
 
       const objet = noeud as Record<string, unknown>;
 
-      // Un fait se reconnaît à sa visibilité effective, que seuls les faits
-      // portent.
       if (
         typeof objet.visibiliteEffective === 'string' &&
         objet.visibiliteEffective !== 'public'
@@ -125,7 +102,6 @@ export class GardeDeSortie implements NestInterceptor {
         }
       }
 
-      // Une entité se reconnaît à son type et à sa visibilité propre.
       if (
         typeof objet.typeEntiteId === 'string' &&
         typeof objet.visibilite === 'string' &&

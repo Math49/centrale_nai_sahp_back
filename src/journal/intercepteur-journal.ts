@@ -21,20 +21,6 @@ import { JournalConsultationService } from './journal-consultation.service';
 
 const METHODES_ECRIVANTES = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
 
-/**
- * Intercepteur de journal — consultation en sortie de lecture, audit en sortie
- * d'écriture.
- *
- * **Applicatif et non trigger** : un trigger ne connaît pas l'agent courant.
- *
- * En sortie seulement, et jamais en entrée : une requête refusée ou en erreur
- * n'a rien produit, et la journaliser laisserait croire à un geste qui n'a pas
- * eu lieu.
- *
- * L'audit générique ne s'écrit que si le service n'a pas tracé lui-même — voir
- * `ContexteJournal`. Un chemin d'écriture nouveau est donc tracé d'office, même
- * si personne n'y a pensé.
- */
 @Injectable()
 export class IntercepteurJournal implements NestInterceptor {
   private readonly journal = new Logger(IntercepteurJournal.name);
@@ -59,7 +45,6 @@ export class IntercepteurJournal implements NestInterceptor {
     const agent = requete.agent;
 
     if (!agent) {
-      // Connexion, santé : aucun agent résolu, rien à imputer à personne.
       return suite.handle();
     }
 
@@ -74,11 +59,6 @@ export class IntercepteurJournal implements NestInterceptor {
 
     const ecriture = METHODES_ECRIVANTES.has(requete.method) && !horsAudit;
 
-    // La portée doit envelopper l'**abonnement**, pas la construction de
-    // l'observable : `suite.handle()` ne fait que décrire le traitement, et
-    // Nest ne s'y abonne qu'après. Ouvrir la portée autour du seul appel
-    // laisserait le contrôleur s'exécuter en dehors, et l'intercepteur croirait
-    // qu'aucun service n'a tracé.
     return new Observable<unknown>((observateur) =>
       this.contexte.executer(() =>
         suite
@@ -116,13 +96,6 @@ export class IntercepteurJournal implements NestInterceptor {
     }
   }
 
-  /**
-   * L'objet consulté, lu dans la réponse plutôt que rechargé.
-   *
-   * La fiche porte déjà sa visibilité, et c'est elle qui dit si la lecture a
-   * demandé une dérogation. La relire en base coûterait une requête pour une
-   * information qu'on tient.
-   */
   private objetConsulte(
     requete: RequeteAuthentifiee,
     reponse: unknown,
@@ -145,14 +118,10 @@ export class IntercepteurJournal implements NestInterceptor {
     return { id, visibilite };
   }
 
-  /** Trace de repli : le geste, sa cible et ce que la requête portait. */
   private async tracerGeneriquement(
     requete: RequeteAuthentifiee,
     agentId: string,
   ): Promise<void> {
-    // `route` n'est pas typé par express ; le gabarit de route — « /entites/:id »
-    // — vaut mieux que l'URL concrète, qui ferait autant d'actions distinctes
-    // qu'il y a d'identifiants.
     const gabarit = (requete.route as { path?: string } | undefined)?.path;
     const chemin = gabarit ?? requete.path;
     const cible = (requete.params as Record<string, string> | undefined)?.id;
@@ -175,12 +144,6 @@ export class IntercepteurJournal implements NestInterceptor {
     return premier.replace(/s$/, '');
   }
 
-  /**
-   * Le corps de la requête, débarrassé de ce qui ne doit jamais être relu.
-   *
-   * Un mot de passe recopié dans une trace y resterait lisible pour toujours,
-   * et le journal se consulte.
-   */
   private corpsLisible(corps: unknown): Prisma.InputJsonObject | undefined {
     if (!corps || typeof corps !== 'object' || Array.isArray(corps)) {
       return undefined;

@@ -17,9 +17,8 @@ import { COOKIE_SESSION } from './cookie-session';
 import { CLE_MOT_DE_PASSE_A_CHANGER, CLE_PUBLIQUE } from './decorateurs';
 
 export interface ContenuJeton {
-  /** Identifiant de l'agent. */
   sub: string;
-  /** Version du jeton à la date d'émission. */
+
   ver: number;
 }
 
@@ -76,14 +75,6 @@ export class GardeAuthentification implements CanActivate {
     );
   }
 
-  /**
-   * Le jeton, pris **d'abord dans le cookie**, à défaut dans l'en-tête.
-   *
-   * Le cookie `httpOnly` est le mode normal : le navigateur l'envoie seul, et
-   * aucun script de la page ne peut le lire. L'en-tête `Authorization` reste
-   * accepté pour ce qui n'est pas un navigateur — les tests d'intégration, la
-   * documentation Swagger, un appel en ligne de commande.
-   */
   private jetonDeLaRequete(requete: RequeteAuthentifiee): string | undefined {
     const cookies = requete.cookies as Record<string, string> | undefined;
     const duCookie = cookies?.[COOKIE_SESSION];
@@ -106,13 +97,6 @@ export class GardeAuthentification implements CanActivate {
     }
   }
 
-  /**
-   * Relit l'agent en base à chaque requête.
-   *
-   * C'est ce qui rend `token_version`, `actif` et `anonymise` immédiatement
-   * opposables : un jeton reste cryptographiquement valide après une
-   * anonymisation, seule la relecture le rend inopérant.
-   */
   private async resoudreAgent(contenu: ContenuJeton): Promise<AgentCourant> {
     const agent = await this.prisma.agent.findUnique({
       where: { id: contenu.sub },

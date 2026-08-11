@@ -21,16 +21,6 @@ export function monterSwagger(application: INestApplication): void {
   SwaggerModule.setup('documentation', application, document);
 }
 
-/**
- * Produit le contrat sans ouvrir de port et sans base de données.
- *
- * `application.init()` n'est volontairement pas appelé : il déclencherait les
- * hooks de cycle de vie, donc le `$connect` de PrismaService. Générer le
- * contrat en intégration continue ne doit pas exiger un PostgreSQL joignable.
- *
- * Utilisé par scripts/generer-openapi.mjs pour écrire le openapi.json que le
- * dépôt front versionne et dont il dérive son client typé.
- */
 export async function construireDocumentOpenApi(): Promise<OpenAPIObject> {
   const application = await NestFactory.create(AppModule, { logger: false });
 

@@ -15,14 +15,6 @@ import {
   CLE_SUPER_ADMIN,
 } from './decorateurs';
 
-/**
- * Garde de permissions — **refus par défaut**.
- *
- * Une route qui ne déclare ni `@Publique()`, ni `@SansPermission()`, ni
- * `@Permissions(...)` est refusée. Un oubli de décorateur doit produire un
- * refus, jamais une ouverture : c'est la propriété qui rend le dispositif
- * robuste au développement futur, et elle est testée explicitement.
- */
 @Injectable()
 export class GardePermission implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
@@ -42,8 +34,6 @@ export class GardePermission implements CanActivate {
 
     const requete = contexte.switchToHttp().getRequest<RequeteAuthentifiee>();
 
-    // Réservé au super-admin, câblé en dur : aucune permission n'ouvre cette
-    // porte, pas même une permission qu'un grade s'accorderait lui-même.
     if (this.reflector.getAllAndOverride<boolean>(CLE_SUPER_ADMIN, cibles)) {
       if (!requete.agent?.superAdmin) {
         throw new ForbiddenException('réservé au super-admin');
@@ -68,8 +58,6 @@ export class GardePermission implements CanActivate {
       throw new ForbiddenException('agent non résolu');
     }
 
-    // Contournement du super-admin : câblé en dur, non configurable.
-    // Ses consultations sont journalisées et signalées (lot 11).
     if (agent.superAdmin) {
       return true;
     }

@@ -28,17 +28,6 @@ import {
   type Compte,
 } from './aide-comptes';
 
-/**
- * Recette du lot 5.
- *
- * Le cas de référence : entité publique, dossier privé, l'agent non habilité
- * voit la fiche sans rien de ce qui vient du dossier privé. Et la règle des
- * gardiens : un fait à deux gardiens n'est accessible qu'avec les deux
- * habilitations.
- *
- * S'y ajoutent les six vecteurs de fuite par déduction que la conception
- * technique §6.6 recense.
- */
 describe('Lot 5 — visibilité (e2e)', () => {
   let application: INestApplication;
   let serveur: Server;
@@ -51,11 +40,10 @@ describe('Lot 5 — visibilité (e2e)', () => {
   let junior: Compte;
   let referentiel: ReferentielInstalle;
 
-  /** L'agent visé par l'enquête interne. Son entité reste publique. */
   let idAgentX = '';
-  /** Une entité privée d'une autre enquête. */
+
   let idIndicateur = '';
-  /** Un véhicule public, cible d'un lien depuis Agent X. */
+
   let idVehiculePublic = '';
 
   let idDossierInterne = '';
@@ -138,8 +126,6 @@ describe('Lot 5 — visibilité (e2e)', () => {
       .get(MadrinaService)
       .installerReferentiel(superAdmin.id);
 
-    // ── Le décor du cas de référence ──
-
     const agentX = await request(serveur)
       .post('/entites')
       .set(enTantQue(superAdmin))
@@ -190,7 +176,6 @@ describe('Lot 5 — visibilité (e2e)', () => {
     });
     idDossierInterne = dossier.id;
 
-    // Un fait saisi depuis le dossier privé, sur une entité publique.
     await request(serveur)
       .post('/faits')
       .set(enTantQue(superAdmin))
@@ -206,7 +191,6 @@ describe('Lot 5 — visibilité (e2e)', () => {
       })
       .expect(201);
 
-    // Un lien à deux gardiens : dossier privé ET cible privée.
     await request(serveur)
       .post('/faits')
       .set(enTantQue(superAdmin))
@@ -273,8 +257,6 @@ describe('Lot 5 — visibilité (e2e)', () => {
         })
         .expect(201);
 
-      // En trigger AFTER, la ligne renvoyée par le RETURNING serait périmée et
-      // annoncerait « public » à l'agent qui vient d'écrire.
       expect(
         (reponse.body as { visibiliteEffective: string }).visibiliteEffective,
       ).toBe('prive');
@@ -309,8 +291,6 @@ describe('Lot 5 — visibilité (e2e)', () => {
         select: { valeurs: true },
       });
 
-      // La colonne agrège tous les faits sans égard pour la visibilité : la
-      // servir telle quelle serait la fuite la plus facile à commettre.
       expect((brut.valeurs as Record<string, unknown>).date_de_naissance).toBe(
         '1989-02-14',
       );
@@ -339,8 +319,6 @@ describe('Lot 5 — visibilité (e2e)', () => {
     let idLienDeuxGardiens = '';
 
     beforeAll(async () => {
-      // La cible du lien devient privée : le fait a désormais deux gardiens,
-      // le dossier de saisie et la cible.
       await request(serveur)
         .patch(`/entites/${idVehiculePublic}`)
         .set(enTantQue(superAdmin))
@@ -411,8 +389,6 @@ describe('Lot 5 — visibilité (e2e)', () => {
         .set(enTantQue(junior))
         .expect(404);
 
-      // Un 403 confirmerait l'existence de l'objet, ce que le niveau privé doit
-      // précisément empêcher.
       expect((reponse.body as { statusCode: number }).statusCode).toBe(404);
     });
 
@@ -469,8 +445,6 @@ describe('Lot 5 — visibilité (e2e)', () => {
     });
 
     it('la plaque d’un véhicule privé reste refusée en double, sans le nommer', async () => {
-      // Conséquence assumée : l'unicité tient, mais le message ne peut pas
-      // désigner une fiche que l'agent n'a pas le droit de connaître.
       const reponse = await request(serveur)
         .post('/entites')
         .set(enTantQue(junior))
@@ -502,7 +476,6 @@ describe('Lot 5 — visibilité (e2e)', () => {
     it('livre les onglets du type, déjà peuplés', async () => {
       const vue = await fiche(etatMajor, idAgentX);
 
-      // Le type Personne porte trois onglets dans le référentiel de référence.
       expect(vue.onglets.map((onglet) => onglet.libelle)).toEqual([
         'Appartenance',
         'Véhicules',
@@ -513,8 +486,6 @@ describe('Lot 5 — visibilité (e2e)', () => {
     it('ne place aucun lien hors onglet quand la mise en page est complète', async () => {
       const vue = await fiche(etatMajor, idAgentX);
 
-      // Un lien qu'aucun onglet ne regroupe doit rester visible : une erreur
-      // de configuration ne doit pas passer pour une absence de donnée.
       expect(vue.liensHorsOnglet).toEqual([]);
     });
 
@@ -629,8 +600,6 @@ describe('Lot 5 — visibilité (e2e)', () => {
         .send({ visibilite: Visibilite.prive })
         .expect(200);
 
-      // Oublier la cascade côté cible laisserait lisible « Milo Renard →
-      // membre de → un groupe devenu privé ».
       expect((await fiche(junior, idMembre)).liens).toHaveLength(0);
       expect((await fiche(etatMajor, idMembre)).liens).toHaveLength(1);
     });
@@ -649,8 +618,6 @@ describe('Lot 5 — visibilité (e2e)', () => {
         select: { id: true },
       });
 
-      // On simule un défaut de filtrage en amont : le garde doit s'en
-      // apercevoir plutôt que de laisser sortir la donnée.
       const charge = {
         liens: [
           { faitId: faitInterdit.id, visibiliteEffective: Visibilite.prive },
@@ -675,7 +642,6 @@ describe('Lot 5 — visibilité (e2e)', () => {
     });
   });
 
-  /** Un agent sans aucune habilitation ni dérogation. */
   function agentSansDroit() {
     return {
       id: junior.id,

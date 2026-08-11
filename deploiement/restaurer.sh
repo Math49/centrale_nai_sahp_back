@@ -1,22 +1,5 @@
 #!/bin/sh
-# Restauration de la Centrale N&I — base **et** volume de fichiers.
-#
-# Se lance depuis l'hôte, avec la pile arrêtée sauf `postgres` :
-#
-#   docker compose --env-file .env.production stop api front
-#   docker compose --env-file .env.production run --rm \
-#     -v centrale-ni_sauvegardes:/sauvegardes \
-#     -v centrale-ni_fichiers:/cible/fichiers \
-#     sauvegarde /bin/sh /usr/local/bin/restaurer.sh 20260809T030000Z
-#   docker compose --env-file .env.production start api front
-#
-# Elle **refuse d'écraser une base non vide sans confirmation explicite** :
-# restaurer par erreur sur une instance vivante détruirait ce que la plateforme
-# est faite pour ne jamais perdre. Passer FORCER=1 pour l'assumer.
-#
-# Procédure testée : voir la section « Restauration » du README, qui décrit la
-# répétition à faire au moins une fois avant la mise en service. Une sauvegarde
-# jamais restaurée n'est pas une sauvegarde.
+
 
 set -eu
 
@@ -47,8 +30,7 @@ archive_fichiers="${DESTINATION}/${HORODATAGE}.fichiers.tar.gz"
 [ -f "${archive_base}" ] || rater "introuvable : ${archive_base}"
 [ -f "${archive_fichiers}" ] || rater "introuvable : ${archive_fichiers}"
 
-# Les deux archives d'un même horodatage vont ensemble. Restaurer une base sans
-# ses images laisserait des fiches renvoyant vers des fichiers absents.
+
 dire "restauration de ${HORODATAGE}"
 
 entites=$(psql --tuples-only --no-align --command \
@@ -59,15 +41,15 @@ if [ "${entites}" != "0" ] && [ "${FORCER:-0}" != "1" ]; then
 fi
 
 dire 'restauration de la base'
-# `--clean --if-exists` remet le schéma à plat avant de recharger : sans cela,
-# les triggers et les contraintes de prisma/sql/ resteraient en double.
+
+
 pg_restore --clean --if-exists --no-owner --no-privileges \
 	--dbname="${PGDATABASE}" "${archive_base}"
 
 dire 'restauration du volume de fichiers'
 mkdir -p "${CIBLE_FICHIERS}"
-# Le volume est vidé d'abord : un fichier resté d'une instance précédente
-# n'appartient à aucune fiche et ne se retrouverait jamais.
+
+
 rm -rf "${CIBLE_FICHIERS:?}"/*
 tar -xzf "${archive_fichiers}" -C "${CIBLE_FICHIERS}"
 

@@ -1,13 +1,5 @@
 import { SensLien, TypeDonnee } from '@prisma/client';
 
-/**
- * Référentiel du parcours de référence.
- *
- * Illustratif : la configuration réelle se fait dans le panneau
- * d'administration. Celui-ci existe pour que le parcours Madrina soit
- * rejouable sur une instance vierge, jusqu'à la recette d'ensemble du lot 12.
- */
-
 export interface DescriptionChamp {
   cle: string;
   libelle: string;
@@ -115,8 +107,6 @@ export const TYPES_ENTITES: DescriptionType[] = [
         liens: [{ code: 'proprietaire_de', sens: SensLien.direct }],
       },
       {
-        // Deux types de liens fins dans un même onglet : la nuance entre
-        // « interpellé » et « présent » reste exploitable par le graphe.
         libelle: 'Événements',
         liens: [
           { code: 'interpelle_lors_de', sens: SensLien.direct },

@@ -6,14 +6,6 @@ import { Publique } from '../auth/decorateurs';
 import { PrismaService } from '../prisma/prisma.service';
 import { SanteReponseDto } from './sante.dto';
 
-/**
- * Route de santé.
- *
- * Avec la connexion, l'une des deux seules routes publiques du projet. Le
- * `@Publique()` ci-dessous est une exception explicite à la règle du refus par
- * défaut : une sonde d'infrastructure ne détient pas de jeton. Il ne divulgue
- * rien de plus que l'existence du service et l'état de sa base.
- */
 @ApiTags('sante')
 @Controller('sante')
 @Publique()

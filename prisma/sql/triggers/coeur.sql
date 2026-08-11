@@ -1,14 +1,5 @@
--- Triggers de cohérence du cœur.
---
--- Frontière retenue : la base garantit que la donnée ne peut pas devenir
--- incohérente, l'application décide qui a le droit de la voir.
---
--- Les triggers de mise à jour portent une clause WHEN qui les restreint aux
--- colonnes dont ils dépendent. Sans elle, les cascades de visibilité — qui
--- réécrivent `visibilite_effective` en masse — relanceraient la projection et
--- le recalcul d'unicité de chaque fait touché, pour rien.
 
--- ─── Projection des faits sur l'entité, et recalcul du libellé ───
+
 
 CREATE OR REPLACE FUNCTION fait_projection()
 RETURNS trigger AS $$
@@ -20,7 +11,7 @@ BEGIN
 
   PERFORM projeter_entite(NEW.sujet_id);
 
-  -- Un fait qui change de sujet laisse deux fiches à recalculer.
+
   IF TG_OP = 'UPDATE' AND OLD.sujet_id IS DISTINCT FROM NEW.sujet_id THEN
     PERFORM projeter_entite(OLD.sujet_id);
   END IF;
@@ -48,7 +39,6 @@ WHEN (
 )
 EXECUTE FUNCTION fait_projection();
 
--- ─── Unicité des champs marqués uniques ───
 
 CREATE OR REPLACE FUNCTION fait_unicite()
 RETURNS trigger AS $$
@@ -85,11 +75,6 @@ WHEN (
 )
 EXECUTE FUNCTION fait_unicite();
 
--- ─── Reprojection après changement de gabarit ───
---
--- Sans cela, modifier « {plaque} » en « {plaque} {modele} » depuis
--- l'administration laisserait tous les libellés déjà calculés dans leur ancien
--- état, sans qu'aucun écran ne le signale.
 
 CREATE OR REPLACE FUNCTION type_entite_reprojection()
 RETURNS trigger AS $$
@@ -113,7 +98,6 @@ CREATE TRIGGER trg_type_entite_reprojection
 AFTER UPDATE OF modele_libelle ON type_entite
 FOR EACH ROW EXECUTE FUNCTION type_entite_reprojection();
 
--- ─── Horodatage ───
 
 CREATE OR REPLACE FUNCTION horodater()
 RETURNS trigger AS $$

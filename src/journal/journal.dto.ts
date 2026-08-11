@@ -1,12 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-/**
- * Une écriture, telle que le journal la restitue.
- *
- * L'agent y est désigné par son identifiant **et** par un libellé recalculé à
- * la lecture, jamais recopié à l'écriture : une trace qui aurait figé le nom
- * survivrait à l'anonymisation du compte, qui perdrait alors son sens.
- */
 export class EntreeAuditDto {
   @ApiProperty({ description: 'Identifiant de l’entrée, sérialisé en texte' })
   id!: string;

@@ -31,13 +31,6 @@ import {
 import { DossiersService } from './dossiers.service';
 import { Consultation } from '../journal/decorateurs';
 
-/**
- * Dossiers.
- *
- * Un dossier ne contient rien : il contextualise. `suivi` le relie aux entités
- * surveillées, et chaque fait retient son dossier de saisie pour en hériter la
- * visibilité. Aucune donnée n'appartient à un dossier.
- */
 @ApiTags('dossiers')
 @ApiBearerAuth('jeton')
 @Controller('dossiers')
@@ -106,8 +99,6 @@ export class DossiersController {
     return this.dossiers.modifier(agent, id, corps);
   }
 
-  // ─────────────────────────── Suivi ───────────────────────────
-
   @Post(':id/suivi')
   @Permissions(PERMISSIONS.DOSSIER_MODIFIER)
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -138,8 +129,6 @@ export class DossiersController {
   ): Promise<void> {
     return this.dossiers.nePlusSuivre(agent, id, entiteId);
   }
-
-  // ─────────────────────── Habilitations ───────────────────────
 
   @Post(':id/habilitations')
   @Permissions(PERMISSIONS.DOSSIER_HABILITER)

@@ -13,20 +13,10 @@ import type {
   SignalDto,
 } from './signaux.dto';
 
-/** Le niveau « à confirmer », seul concerné par le vieillissement. */
 const A_CONFIRMER = 2;
 
 const JOUR = 24 * 60 * 60 * 1000;
 
-/**
- * Signaux de l'accueil.
- *
- * **Calculés après application des règles de visibilité**, jamais avant : un
- * agent ne voit jamais un signal portant sur un objet auquel il n'a pas accès.
- * C'est le cinquième des six vecteurs de fuite par déduction, et le plus facile
- * à commettre — un signal est un raccourci vers une information, et un raccourci
- * vers ce qu'on ne devrait pas voir en révèle l'existence.
- */
 @Injectable()
 export class SignauxService {
   constructor(
@@ -45,17 +35,6 @@ export class SignauxService {
     return [...recoupements, ...recurrences, ...vieillissements];
   }
 
-  /**
-   * Recoupement : une entité est suivie par plusieurs dossiers **sans lien
-   * direct entre leurs entités pivots**.
-   *
-   * La réserve compte autant que la règle : si les pivots sont déjà reliés, le
-   * rapprochement est connu, et le signaler ne dirait rien de neuf.
-   *
-   * On part des dossiers dont le **contenu** est lisible, et non de ceux dont
-   * l'existence l'est : un dossier restreint affiche son nom mais garde son
-   * suivi fermé. Le lire ici dirait qui il surveille.
-   */
   private async recoupements(agent: AgentCourant): Promise<SignalDto[]> {
     const client = this.visibilite.clientPour(agent);
 
@@ -74,7 +53,6 @@ export class SignauxService {
       this.visibilite.contenuDeDossierLisible(agent, dossier),
     );
 
-    /** entité suivie → dossiers qui la suivent. */
     const suivie = new Map<string, typeof lisibles>();
 
     for (const dossier of lisibles) {
@@ -93,7 +71,6 @@ export class SignauxService {
       return [];
     }
 
-    // Le client filtré écarte de lui-même les entités que l'agent ne voit pas.
     const entites = await client.entite.findMany({
       where: {
         id: { in: candidates.map(([entiteId]) => entiteId) },
@@ -132,7 +109,6 @@ export class SignauxService {
     return signaux;
   }
 
-  /** Un lien direct entre deux pivots suffit à rendre le recoupement banal. */
   private pivotsDejaRelies(
     dossiers: readonly { entitePivotId: string }[],
     voisinages: Map<string, Set<string>>,
@@ -151,10 +127,6 @@ export class SignauxService {
     return false;
   }
 
-  /**
-   * Récurrence : une entité relie des entités suivies par des dossiers
-   * différents. Le graphe la calcule déjà, sur la vue élaguée de cet agent.
-   */
   private async recurrences(agent: AgentCourant): Promise<SignalDto[]> {
     const recurrentes = await this.graphe.recurrences(agent);
 
@@ -179,13 +151,6 @@ export class SignauxService {
     }));
   }
 
-  /**
-   * Vieillissement : un fait « à confirmer » non revu au-delà du délai.
-   *
-   * « Revu » se lit sur `modifie_le` : reprendre un fait, ne serait-ce que pour
-   * en corriger la source, suffit à le sortir du signal. C'est exactement le
-   * geste que le signal appelle.
-   */
   private async vieillissements(agent: AgentCourant): Promise<SignalDto[]> {
     const jours = this.configuration.get('VIEILLISSEMENT_JOURS', {
       infer: true,
@@ -229,10 +194,6 @@ export class SignauxService {
     });
   }
 
-  /**
-   * « Mes dossiers » : ceux que l'agent a ouverts, et ceux où il est nommément
-   * habilité. Les deux motifs se distinguent à l'affichage.
-   */
   async mesDossiers(agent: AgentCourant): Promise<DossierDeLAgentDto[]> {
     const dossiers = await this.visibilite.clientPour(agent).dossier.findMany({
       where: {
@@ -259,7 +220,6 @@ export class SignauxService {
     }));
   }
 
-  /** Dernière activité : les faits récemment saisis, filtrés comme le reste. */
   async derniereActivite(agent: AgentCourant): Promise<ActiviteDto[]> {
     const faits = await this.visibilite.clientPour(agent).fait.findMany({
       where: { etat: EtatFait.actif },
@@ -291,12 +251,6 @@ export class SignauxService {
     }));
   }
 
-  /**
-   * Recherche globale.
-   *
-   * Les objets privés en sont **absents, sans mention** : un décompte qui ne
-   * tombe pas juste est déjà une information.
-   */
   async rechercher(
     agent: AgentCourant,
     q: string,

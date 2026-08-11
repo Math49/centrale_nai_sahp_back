@@ -6,10 +6,6 @@ import { VisibiliteService } from '../visibilite/visibilite.service';
 import type { Arete, GrapheComplet, Noeud } from './cache-graphe.service';
 import { CacheGrapheService } from './cache-graphe.service';
 
-/**
- * Vue du graphe pour un agent : le graphe complet, plus les deux prédicats qui
- * décident ce qu'il en franchit.
- */
 interface VueElaguee {
   graphe: GrapheComplet;
   noeudVisible: (id: string) => boolean;
@@ -31,14 +27,6 @@ export class GrapheService {
     private readonly visibilite: VisibiliteService,
   ) {}
 
-  /**
-   * Élagage — **avant traversée, jamais après**.
-   *
-   * Un chemin passant par un lien masqué ne doit pas exister pour cet agent.
-   * Filtrer le résultat d'un parcours mené sur le graphe complet reviendrait à
-   * dire « un chemin existe, mais vous n'y avez pas droit » : ce serait déjà
-   * l'avoir dit.
-   */
   private async elaguer(agent: AgentCourant): Promise<VueElaguee> {
     const graphe = await this.cache.obtenir();
     const contexte = this.visibilite.contexte(agent);
@@ -54,9 +42,6 @@ export class GrapheService {
       );
     };
 
-    // La décision reste celle de `contenuAccessible` : la règle des gardiens
-    // ne s'écrit qu'à un endroit, seule la façon de rassembler les gardiens
-    // change ici — ils sont en mémoire plutôt qu'en base.
     const areteFranchissable = (arete: Arete): boolean =>
       contenuAccessible(contexte, [
         { niveau: arete.visibiliteFait, habilite: false },
@@ -91,13 +76,6 @@ export class GrapheService {
     return arete.sujetId === depuis ? arete.cibleId : arete.sujetId;
   }
 
-  /**
-   * Voisinage d'un nœud, sur `profondeur` sauts.
-   *
-   * Chaque nœud rapporte son nombre de voisins **non affichés** — ceux que
-   * l'agent pourrait atteindre en dépliant, jamais ceux qui lui sont masqués.
-   * Compter les seconds révélerait leur existence.
-   */
   async voisinage(
     agent: AgentCourant,
     depuis: string,
@@ -166,21 +144,6 @@ export class GrapheService {
     };
   }
 
-  /**
-   * **La vue entière**, élaguée pour cet agent.
-   *
-   * Tous les nœuds qu'il peut voir, toutes les arêtes qu'il peut franchir, sans
-   * point de départ ni profondeur : l'écran de graphe charge l'ensemble et
-   * laisse l'agent naviguer dedans, plutôt que de le faire déplier saut par
-   * saut.
-   *
-   * L'élagage reste **avant** constitution, comme partout ailleurs : ce qui
-   * n'est pas franchissable n'entre pas dans la vue, il n'en est pas retiré
-   * après coup.
-   *
-   * Un nœud isolé y figure : une fiche sans lien fait partie de ce que le
-   * service sait, et la masquer laisserait croire qu'elle n'existe pas.
-   */
   async vueEntiere(
     agent: AgentCourant,
     fiabiliteMinimale: number,
@@ -208,7 +171,7 @@ export class GrapheService {
       .filter((id) => vue.noeudVisible(id))
       .map((id) => ({
         ...vue.graphe.noeuds.get(id)!,
-        // Tout est affiché : il ne reste rien à déplier.
+
         voisinsNonAffiches: 0,
         recurrence: recurrences.has(id),
       }));
@@ -216,18 +179,6 @@ export class GrapheService {
     return { noeuds, aretes: [...aretes.values()] };
   }
 
-  /**
-   * Deux chemins, présentés côte à côte : le plus court et le plus solide.
-   *
-   * Le plus solide maximise le minimum de fiabilité le long du trajet — c'est
-   * l'invariant « la fiabilité d'un chemin est celle de son maillon le plus
-   * faible », pris comme critère plutôt que comme constat.
-   *
-   * Les quatre niveaux étant peu nombreux, on cherche par seuil décroissant :
-   * le premier seuil qui relie encore les deux entités donne le meilleur
-   * maillon faible possible, et le parcours en largeur y donne le plus court
-   * des trajets qui l'atteignent.
-   */
   async chemins(
     agent: AgentCourant,
     de: string,
@@ -256,7 +207,6 @@ export class GrapheService {
       }
     }
 
-    // Lorsque les deux coïncident, un seul est affiché.
     if (
       plusCourt &&
       plusSolide &&
@@ -268,7 +218,6 @@ export class GrapheService {
     return { plusCourt, plusSolide };
   }
 
-  /** Parcours en largeur, sur les seules arêtes d'au moins ce niveau. */
   private parcourir(
     vue: VueElaguee,
     de: string,
@@ -340,13 +289,6 @@ export class GrapheService {
     };
   }
 
-  /**
-   * Récurrences : les entités qui relient plusieurs entités appartenant à des
-   * dossiers différents.
-   *
-   * Calculées sur la vue élaguée, donc propres à chaque agent — un rapprochement
-   * qui ne tiendrait qu'à un lien masqué ne doit pas se signaler.
-   */
   async recurrences(agent: AgentCourant): Promise<Set<string>> {
     const vue = await this.elaguer(agent);
     const contexte = this.visibilite.contexte(agent);
@@ -390,13 +332,6 @@ export class GrapheService {
     return recurrentes;
   }
 
-  /**
-   * Arêtes de la vue élaguée, retrouvées par identifiant de fait.
-   *
-   * Passe par la vue, jamais par la base : ce que cet agent peut franchir est
-   * déjà décidé, et le redemander ailleurs rouvrirait la porte à une seconde
-   * règle qui divergerait.
-   */
   async aretes(
     agent: AgentCourant,
     faitIds: readonly string[],
@@ -415,13 +350,6 @@ export class GrapheService {
     return trouvees;
   }
 
-  /**
-   * Voisins immédiats de chacune de ces entités, sur la vue élaguée.
-   *
-   * Un seul élagage pour toute la question, là où enchaîner des recherches de
-   * chemin en referait un par appel. Sert au signal de recoupement, qui se tait
-   * quand les pivots concernés sont déjà reliés.
-   */
   async voisinsDirects(
     agent: AgentCourant,
     ids: readonly string[],
@@ -444,7 +372,6 @@ export class GrapheService {
     return voisinages;
   }
 
-  /** Libellés des nœuds, pour les écrans qui n'ont que des identifiants. */
   async nommer(
     agent: AgentCourant,
     ids: string[],

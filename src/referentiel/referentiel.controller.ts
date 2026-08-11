@@ -41,16 +41,6 @@ import {
 } from './referentiel.dto';
 import { ReferentielService } from './referentiel.service';
 
-/**
- * Référentiel.
- *
- * **Lecture ouverte à tout agent connecté** : le front en dérive chacun de ses
- * formulaires et chacune de ses fiches. Le catalogue décrit la forme du modèle,
- * jamais son contenu — il ne révèle aucune donnée d'enquête.
- *
- * **Écriture réservée au super-admin, câblée en dur.** Les enquêteurs créent
- * des entités et des faits, jamais des types ni des champs.
- */
 @ApiTags('referentiel')
 @ApiBearerAuth('jeton')
 @Controller('referentiel')
@@ -64,8 +54,6 @@ export class ReferentielController {
   catalogue(): Promise<ReferentielDto> {
     return this.referentiel.catalogue();
   }
-
-  // ─────────────────────── Types d'entités ───────────────────────
 
   @Post('types-entites')
   @SuperAdminSeul()
@@ -128,8 +116,6 @@ export class ReferentielController {
     return this.referentiel.apercuGabarit(corps.modeleLibelle);
   }
 
-  // ───────────────────────────── Champs ─────────────────────────────
-
   @Post('champs')
   @SuperAdminSeul()
   @ApiResponse({ status: 201, type: DefinitionChampDto })
@@ -172,8 +158,6 @@ export class ReferentielController {
     return this.referentiel.ordonnerChamps(auteur.id, id, corps.ids);
   }
 
-  // ─────────────────────────── Types de liens ───────────────────────────
-
   @Post('types-liens')
   @SuperAdminSeul()
   @ApiOperation({
@@ -209,8 +193,6 @@ export class ReferentielController {
   ): Promise<void> {
     return this.referentiel.supprimerTypeLien(auteur.id, id);
   }
-
-  // ───────────────────────────── Onglets ─────────────────────────────
 
   @Post('onglets')
   @SuperAdminSeul()

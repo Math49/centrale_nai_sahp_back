@@ -1,7 +1,4 @@
 #!/usr/bin/env node
-// Prépare la base des tests d'intégration : la crée si besoin, y applique les
-// migrations. Une base distincte de celle de développement, parce que les
-// tests vident des tables.
 
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
@@ -28,7 +25,6 @@ const variables = Object.fromEntries(
 const url = new URL(variables.DATABASE_URL);
 const nomBase = url.pathname.slice(1);
 
-// On se connecte à la base de maintenance pour pouvoir créer l'autre.
 const urlMaintenance = new URL(url);
 urlMaintenance.pathname = '/postgres';
 
@@ -42,8 +38,6 @@ try {
   `;
 
   if (existe.length === 0) {
-    // CREATE DATABASE n'accepte pas de paramètre lié ; le nom vient de notre
-    // propre .env.test, pas d'une entrée utilisateur.
     await client.$executeRawUnsafe(`CREATE DATABASE "${nomBase}"`);
     console.log(`base de test créée : ${nomBase}`);
   }
