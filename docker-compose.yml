@@ -73,14 +73,6 @@ services:
       retries: 5
       start_period: 40s
 
-  front:
-    image: ${FRONT_IMAGE:?renseigner FRONT_IMAGE}
-    restart: unless-stopped
-    depends_on:
-      - api
-    ports:
-      - '127.0.0.1:${FRONT_PORT:-40510}:40510'
-
   sauvegarde:
     image: postgres:17-alpine
     restart: unless-stopped

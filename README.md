@@ -196,7 +196,6 @@ Le processus refuse de démarrer si l'une manque ou est mal formée.
 | `NODE_ENV` | `development` | |
 | `PORT` | `40511` | |
 | `API_IMAGE` | — | image Docker API tirée par Portainer |
-| `FRONT_IMAGE` | — | image Docker front tirée par Portainer |
 | `DATABASE_URL` | — | obligatoire |
 | `CORS_ORIGINES` | `http://localhost:40510` | liste séparée par des virgules |
 | `SWAGGER_ACTIF` | `true` | expose `/documentation` |
@@ -222,14 +221,11 @@ prévue pour l'hôte.
 
 ## Mise en production
 
-Cinq services et une tâche de sauvegarde : `postgres`, `pgadmin`, `api`,
-`front`, `proxy`. `api` et `front` sont des images GHCR construites par les
-workflows GitHub Actions ; `postgres`, `pgadmin` et `proxy` utilisent leurs
-images officielles.
+Trois services et une t??che de sauvegarde : `postgres`, `pgadmin`, `api`, `sauvegarde`. L'API est une image GHCR construite par le workflow GitHub Actions du d??p??t back ; `postgres` et `pgadmin` utilisent leurs images officielles.
 
 ```bash
 cp .env.production.example .env.production
-# renseigner DOMAINE, API_IMAGE, FRONT_IMAGE, les mots de passe,
+# renseigner DOMAINE, API_IMAGE, les mots de passe,
 # le secret JWT et SUPER_ADMIN_*, puis :
 docker compose --env-file .env.production up -d
 ```
@@ -307,13 +303,13 @@ répète au moins une fois, sur une instance de test, avant l'ouverture du
 service.
 
 ```bash
-docker compose --env-file .env.production stop api front
+docker compose --env-file .env.production stop api
 
 docker compose --env-file .env.production run --rm \
   -v centrale-ni_fichiers:/cible/fichiers \
   sauvegarde /bin/sh /usr/local/bin/restaurer.sh 20260809T030000Z
 
-docker compose --env-file .env.production start api front
+docker compose --env-file .env.production start api
 ```
 
 Le script **refuse d'écraser une base non vide** sans `FORCER=1`, et vérifie en
