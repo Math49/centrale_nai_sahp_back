@@ -34,7 +34,7 @@ services:
       - pgadmin_donnees:/var/lib/pgadmin
 
   api:
-    image: ${API_IMAGE:?renseigner API_IMAGE}
+    image: ghcr.io/math49/centrale_nai_sahp_back:latest
     restart: unless-stopped
     depends_on:
       postgres:
