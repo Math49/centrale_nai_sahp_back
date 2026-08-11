@@ -43,7 +43,7 @@ services:
       NODE_ENV: production
       PORT: '40511'
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
-      CORS_ORIGINES: https://${DOMAINE}
+      CORS_ORIGINES: ${CORS_ORIGINES:?renseigner CORS_ORIGINES}
       SWAGGER_ACTIF: 'false'
       JWT_SECRET: ${JWT_SECRET}
       JWT_DUREE: ${JWT_DUREE:-7d}
