@@ -24,7 +24,7 @@ import type { Response } from 'express';
 
 import { PERMISSIONS } from '../agents/permissions';
 import { Agent, type AgentCourant } from '../auth/agent-courant';
-import { Permissions, SansPermission } from '../auth/decorateurs';
+import { Permissions } from '../auth/decorateurs';
 import { FichierDto } from './fichiers.dto';
 import { FichiersService } from './fichiers.service';
 
@@ -35,7 +35,7 @@ export class FichiersController {
   constructor(private readonly fichiers: FichiersService) {}
 
   @Get('entites/:id/fichiers')
-  @SansPermission()
+  @Permissions(PERMISSIONS.ENTITE_CONSULTER)
   @ApiOperation({
     summary: 'Images d’une entité',
     description:
@@ -105,7 +105,7 @@ export class FichiersController {
   }
 
   @Get('fichiers/:id')
-  @SansPermission()
+  @Permissions(PERMISSIONS.ENTITE_CONSULTER)
   @ApiOperation({
     summary: 'Téléchargement authentifié',
     description:

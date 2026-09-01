@@ -7,8 +7,9 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
+import { PERMISSIONS } from '../agents/permissions';
 import { Agent, type AgentCourant } from '../auth/agent-courant';
-import { SansPermission } from '../auth/decorateurs';
+import { Permissions } from '../auth/decorateurs';
 import { AccueilDto, ResultatRechercheDto, SignalDto } from './signaux.dto';
 import { SignauxService } from './signaux.service';
 
@@ -19,7 +20,7 @@ export class SignauxController {
   constructor(private readonly signaux: SignauxService) {}
 
   @Get('accueil')
-  @SansPermission()
+  @Permissions(PERMISSIONS.ENTITE_CONSULTER)
   @ApiOperation({
     summary: 'Écran d’accueil, assemblé',
     description:
@@ -27,9 +28,17 @@ export class SignauxController {
   })
   @ApiResponse({ status: 200, type: AccueilDto })
   async accueil(@Agent() agent: AgentCourant): Promise<AccueilDto> {
+    // L'accueil agrège trois blocs qui ne relèvent pas du même geste. Un grade
+    // de consultation ouvert sur les données mais fermé sur les dossiers ne
+    // doit pas les retrouver ici par la bande : le bloc n'est pas masqué à
+    // l'affichage, il n'est pas calculé.
+    const voitLesDossiers =
+      agent.superAdmin ||
+      agent.permissions.includes(PERMISSIONS.DOSSIER_CONSULTER);
+
     const [signaux, mesDossiers, derniereActivite] = await Promise.all([
       this.signaux.signaux(agent),
-      this.signaux.mesDossiers(agent),
+      voitLesDossiers ? this.signaux.mesDossiers(agent) : Promise.resolve([]),
       this.signaux.derniereActivite(agent),
     ]);
 
@@ -37,7 +46,7 @@ export class SignauxController {
   }
 
   @Get('signaux')
-  @SansPermission()
+  @Permissions(PERMISSIONS.ENTITE_CONSULTER)
   @ApiOperation({
     summary: 'Signaux seuls',
     description:
@@ -49,7 +58,7 @@ export class SignauxController {
   }
 
   @Get('recherche')
-  @SansPermission()
+  @Permissions(PERMISSIONS.ENTITE_CONSULTER)
   @ApiOperation({
     summary: 'Recherche globale',
     description:

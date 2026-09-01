@@ -74,6 +74,38 @@ export class EntitesService {
     private readonly bus: BusInvalidation,
   ) {}
 
+  /**
+   * Habilitation nominative sur une donnée.
+   *
+   * Le 404 avant l'écriture n'est pas une politesse : accorder un accès sur une
+   * fiche qu'on ne voit pas soi-même reviendrait à en confirmer l'existence.
+   */
+  async habiliter(
+    agent: AgentCourant,
+    id: string,
+    agentHabiliteId: string,
+  ): Promise<void> {
+    const entite = await this.visibilite.entiteVisibleOuIntrouvable(agent, id);
+    await this.dossiers.habiliterSurEntite(
+      agent.id,
+      entite.id,
+      agentHabiliteId,
+    );
+  }
+
+  async retirerHabilitation(
+    agent: AgentCourant,
+    id: string,
+    agentHabiliteId: string,
+  ): Promise<void> {
+    const entite = await this.visibilite.entiteVisibleOuIntrouvable(agent, id);
+    await this.dossiers.retirerHabilitationSurEntite(
+      agent.id,
+      entite.id,
+      agentHabiliteId,
+    );
+  }
+
   async creer(
     agent: AgentCourant,
     donnees: CreationEntiteDto,
@@ -302,6 +334,7 @@ export class EntitesService {
       liens,
       creeLe: entite.creeLe.toISOString(),
       fusionneeVersId: entite.fusionneeVersId,
+      habilitations: await this.dossiers.habilitationsDEntite(entite.id),
     };
   }
 

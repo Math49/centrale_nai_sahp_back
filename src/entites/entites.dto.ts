@@ -5,7 +5,7 @@ import {
 } from '@nestjs/swagger';
 import { EtatEntite, TypeDonnee, Visibilite } from '@prisma/client';
 
-import { RattachementDto } from '../dossiers/dossiers.dto';
+import { AgentHabiliteDto, RattachementDto } from '../dossiers/dossiers.dto';
 import { Type } from 'class-transformer';
 import {
   Allow,
@@ -315,6 +315,13 @@ export class FicheEntiteDto extends EntiteResumeeDto {
 
   @ApiProperty({ nullable: true, format: 'uuid' })
   fusionneeVersId!: string | null;
+
+  @ApiProperty({
+    type: [AgentHabiliteDto],
+    description:
+      'Whitelist de la donnée. Nécessaire dès qu’elle est classée : chaque gardien se franchit pour lui-même, et l’habilitation sur un dossier n’en ouvre pas les données.',
+  })
+  habilitations!: AgentHabiliteDto[];
 }
 
 export class SuggestionDoublonDto {

@@ -7,7 +7,20 @@ export interface DefinitionGrade {
   permissions: Permission[];
 }
 
+/**
+ * Les trois gestes de lecture, communs à tous les grades de l'unité.
+ *
+ * Ils forment aussi, à eux seuls, un grade de consultation pour l'extérieur :
+ * c'est exactement ce qu'un « visiteur » doit porter, et rien de plus.
+ */
+export const CONSULTATION: Permission[] = [
+  PERMISSIONS.ENTITE_CONSULTER,
+  PERMISSIONS.DOSSIER_CONSULTER,
+  PERMISSIONS.GRAPHE_CONSULTER,
+];
+
 const JUNIOR: Permission[] = [
+  ...CONSULTATION,
   PERMISSIONS.ENTITE_CREER,
   PERMISSIONS.ENTITE_MODIFIER,
   PERMISSIONS.FAIT_CREER,

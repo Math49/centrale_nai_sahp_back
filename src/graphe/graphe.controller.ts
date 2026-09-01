@@ -19,7 +19,7 @@ import {
 
 import { PERMISSIONS } from '../agents/permissions';
 import { Agent, type AgentCourant } from '../auth/agent-courant';
-import { Permissions, SansPermission } from '../auth/decorateurs';
+import { Permissions } from '../auth/decorateurs';
 import { HorsAudit } from '../journal/decorateurs';
 import { CheminsDto, DispositionDto, VoisinageDto } from './graphe.dto';
 import { GrapheAssembleurService } from './graphe-assembleur.service';
@@ -31,7 +31,7 @@ export class GrapheController {
   constructor(private readonly assembleur: GrapheAssembleurService) {}
 
   @Get()
-  @SansPermission()
+  @Permissions(PERMISSIONS.GRAPHE_CONSULTER)
   @ApiOperation({
     summary: 'Exploration par expansion',
     description:
@@ -67,7 +67,7 @@ export class GrapheController {
   }
 
   @Get('complet')
-  @SansPermission()
+  @Permissions(PERMISSIONS.GRAPHE_CONSULTER)
   @ApiOperation({
     summary: 'Vue entière',
     description:
@@ -93,7 +93,7 @@ export class GrapheController {
   }
 
   @Get('chemin')
-  @SansPermission()
+  @Permissions(PERMISSIONS.GRAPHE_CONSULTER)
   @ApiOperation({
     summary: 'Recherche de chemin',
     description:

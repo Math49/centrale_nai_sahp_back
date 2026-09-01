@@ -11,6 +11,7 @@ import { BusInvalidation } from '../graphe/bus-invalidation';
 import { PrismaService } from '../prisma/prisma.service';
 import { VisibiliteService } from '../visibilite/visibilite.service';
 import type {
+  AgentHabiliteDto,
   DossierResumeDto,
   ModificationDossierDto,
   PanneauDossierDto,
@@ -213,6 +214,55 @@ export class DossiersService {
         transaction,
       );
     });
+  }
+
+  async retirerHabilitationSurEntite(
+    retirePar: string,
+    entiteId: string,
+    agentId: string,
+  ): Promise<void> {
+    await this.prisma.$transaction(async (transaction) => {
+      await transaction.habilitationEntite.deleteMany({
+        where: { entiteId, agentId },
+      });
+
+      await this.audit.tracer(
+        {
+          agentId: retirePar,
+          action: 'entite.retirer_habilitation',
+          cibleTable: 'habilitation_entite',
+          cibleId: entiteId,
+          avant: { agentHabilite: agentId },
+        },
+        transaction,
+      );
+    });
+  }
+
+  /**
+   * Whitelist d'une donnée, prête à l'affichage.
+   *
+   * Lue sans filtre : la liste des habilités d'un objet qu'on a déjà le droit
+   * de lire n'est pas elle-même un renseignement d'enquête, et la masquer
+   * empêcherait de constater qu'on a bien accordé l'accès — c'est exactement
+   * ce qui rendait la panne indiscernable d'un refus.
+   */
+  async habilitationsDEntite(entiteId: string): Promise<AgentHabiliteDto[]> {
+    const habilitations =
+      await this.prisma.sansFiltre.habilitationEntite.findMany({
+        where: { entiteId },
+        include: { agent: true },
+        orderBy: { accordeLe: 'asc' },
+      });
+
+    return habilitations.map((habilitation) => ({
+      agentId: habilitation.agentId,
+      libelle: habilitation.agent.anonymise
+        ? 'agent supprimé'
+        : `${habilitation.agent.prenom} ${habilitation.agent.nom}`,
+      matricule: habilitation.agent.matricule,
+      accordeLe: habilitation.accordeLe.toISOString(),
+    }));
   }
 
   async lister(agent: AgentCourant): Promise<DossierResumeDto[]> {

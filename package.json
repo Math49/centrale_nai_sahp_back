@@ -21,6 +21,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
+    "grades:consultation": "ts-node -r tsconfig-paths/register src/commandes/accorder-consultation.ts",
     "agent:super-admin": "ts-node -r tsconfig-paths/register src/commandes/creer-super-admin.ts",
     "production:initialiser": "ts-node -r tsconfig-paths/register src/commandes/initialiser-production.ts",
     "referentiel:initial": "ts-node -r tsconfig-paths/register src/commandes/installer-referentiel.ts",

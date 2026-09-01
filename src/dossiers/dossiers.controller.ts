@@ -19,7 +19,7 @@ import {
 
 import { PERMISSIONS } from '../agents/permissions';
 import { Agent, type AgentCourant } from '../auth/agent-courant';
-import { Permissions, SansPermission } from '../auth/decorateurs';
+import { Permissions } from '../auth/decorateurs';
 import {
   CreationDossierDto,
   DesignationAgentDto,
@@ -38,7 +38,7 @@ export class DossiersController {
   constructor(private readonly dossiers: DossiersService) {}
 
   @Get()
-  @SansPermission()
+  @Permissions(PERMISSIONS.DOSSIER_CONSULTER)
   @ApiOperation({
     summary: 'Liste des dossiers',
     description:
@@ -50,7 +50,7 @@ export class DossiersController {
   }
 
   @Get(':id')
-  @SansPermission()
+  @Permissions(PERMISSIONS.DOSSIER_CONSULTER)
   @Consultation('dossier')
   @ApiOperation({
     summary: 'Panneau de dossier',

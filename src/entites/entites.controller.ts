@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   DefaultValuePipe,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -24,7 +25,7 @@ import { EtatEntite } from '@prisma/client';
 
 import { PERMISSIONS } from '../agents/permissions';
 import { Agent, type AgentCourant } from '../auth/agent-courant';
-import { Permissions, SansPermission } from '../auth/decorateurs';
+import { Permissions } from '../auth/decorateurs';
 import {
   CreationEntiteDto,
   EntiteResumeeDto,
@@ -34,6 +35,7 @@ import {
   ModificationEntiteDto,
   SuggestionDoublonDto,
 } from './entites.dto';
+import { DesignationAgentDto } from '../dossiers/dossiers.dto';
 import { EntitesService } from './entites.service';
 import { Consultation } from '../journal/decorateurs';
 
@@ -44,7 +46,7 @@ export class EntitesController {
   constructor(private readonly entites: EntitesService) {}
 
   @Get()
-  @SansPermission()
+  @Permissions(PERMISSIONS.ENTITE_CONSULTER)
   @ApiOperation({
     summary: 'Annuaire filtrable',
     description:
@@ -73,7 +75,7 @@ export class EntitesController {
   }
 
   @Get('similaires')
-  @SansPermission()
+  @Permissions(PERMISSIONS.ENTITE_CONSULTER)
   @ApiOperation({
     summary: 'Détection de doublons à la frappe',
     description:
@@ -91,7 +93,7 @@ export class EntitesController {
   }
 
   @Get(':id')
-  @SansPermission()
+  @Permissions(PERMISSIONS.ENTITE_CONSULTER)
   @Consultation('entite')
   @ApiOperation({
     summary: 'Fiche assemblée',
@@ -219,5 +221,44 @@ export class EntitesController {
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<FicheEntiteDto> {
     return this.entites.changerEtat(agent, id, EtatEntite.actif);
+  }
+  /**
+   * Whitelist d'une donnée.
+   *
+   * L'habilitation existe par dossier **et par entité** — c'est la conception
+   * qui le veut, parce qu'une donnée classée est un gardien à part entière.
+   * Elle n'avait jamais été exposée : le modèle, le prédicat et le contexte de
+   * l'agent la portaient tous, mais aucune route ne l'écrivait. Conséquence,
+   * une donnée passée en restreint se fermait à tout le monde et rien ne
+   * pouvait la rouvrir, pas même une habilitation sur son dossier.
+   */
+  @Post(':id/habilitations')
+  @Permissions(PERMISSIONS.DOSSIER_HABILITER)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Habiliter un agent sur une donnée',
+    description:
+      'Nominative, jamais déduite d’un grade. Nécessaire dès que la donnée est classée : être habilité sur le dossier qui la suit ne suffit pas, chaque gardien se franchit pour lui-même.',
+  })
+  @ApiResponse({ status: 204 })
+  habiliter(
+    @Agent() agent: AgentCourant,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() corps: DesignationAgentDto,
+  ): Promise<void> {
+    return this.entites.habiliter(agent, id, corps.agentId);
+  }
+
+  @Delete(':id/habilitations/:agentId')
+  @Permissions(PERMISSIONS.DOSSIER_HABILITER)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Retirer une habilitation sur une donnée' })
+  @ApiResponse({ status: 204 })
+  retirerHabilitation(
+    @Agent() agent: AgentCourant,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('agentId', ParseUUIDPipe) agentId: string,
+  ): Promise<void> {
+    return this.entites.retirerHabilitation(agent, id, agentId);
   }
 }

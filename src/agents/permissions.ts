@@ -1,4 +1,19 @@
 export const PERMISSIONS = {
+  /**
+   * Consultation — les trois gestes de lecture.
+   *
+   * Jusqu'ici toute lecture était ouverte à quiconque était connecté : la seule
+   * question posée était « cet objet vous est-il visible ? ». Cela suffisait
+   * tant que tout compte appartenait à l'unité. Un grade destiné à l'extérieur
+   * demande de pouvoir ouvrir une zone sans les autres — d'où ces trois codes.
+   *
+   * Ils ne remplacent pas la visibilité, ils s'y ajoutent : la permission dit
+   * si l'écran s'ouvre, la visibilité dit ce qu'on y trouve.
+   */
+  ENTITE_CONSULTER: 'entite.consulter',
+  DOSSIER_CONSULTER: 'dossier.consulter',
+  GRAPHE_CONSULTER: 'graphe.consulter',
+
   ENTITE_CREER: 'entite.creer',
   ENTITE_MODIFIER: 'entite.modifier',
   ENTITE_ARCHIVER: 'entite.archiver',
@@ -35,6 +50,9 @@ export const TOUTES_LES_PERMISSIONS: readonly Permission[] =
   Object.values(PERMISSIONS);
 
 export const LIBELLES_PERMISSIONS: Record<Permission, string> = {
+  [PERMISSIONS.ENTITE_CONSULTER]: 'Consulter l’annuaire et les fiches',
+  [PERMISSIONS.DOSSIER_CONSULTER]: 'Consulter les dossiers',
+  [PERMISSIONS.GRAPHE_CONSULTER]: 'Consulter le graphe',
   [PERMISSIONS.ENTITE_CREER]: 'Créer une entité',
   [PERMISSIONS.ENTITE_MODIFIER]: 'Modifier une entité',
   [PERMISSIONS.ENTITE_ARCHIVER]: 'Archiver une entité',
@@ -45,7 +63,8 @@ export const LIBELLES_PERMISSIONS: Record<Permission, string> = {
   [PERMISSIONS.FAIT_INFIRMER]: 'Infirmer un fait',
   [PERMISSIONS.DOSSIER_CREER]: 'Créer un dossier',
   [PERMISSIONS.DOSSIER_MODIFIER]: 'Modifier un dossier',
-  [PERMISSIONS.DOSSIER_HABILITER]: 'Habiliter un agent sur un dossier',
+  [PERMISSIONS.DOSSIER_HABILITER]:
+    'Habiliter un agent sur un dossier ou une donnée',
   [PERMISSIONS.VISIBILITE_DEFINIR]: 'Classer un objet en restreint ou privé',
   [PERMISSIONS.ACCES_DEROGATOIRE_RESTREINT]:
     'Accès dérogatoire aux objets restreints',
