@@ -3,7 +3,9 @@ import { Module } from '@nestjs/common';
 import { AgentsModule } from './agents/agents.module';
 import { AuthModule } from './auth/auth.module';
 import { ConfigurationModule } from './config/configuration.module';
+import { CarteModule } from './carte/carte.module';
 import { DossiersModule } from './dossiers/dossiers.module';
+import { EnquetesModule } from './enquetes/enquetes.module';
 import { EntitesModule } from './entites/entites.module';
 import { FaitsModule } from './faits/faits.module';
 import { FichiersModule } from './fichiers/fichiers.module';
@@ -32,6 +34,8 @@ import { VisibiliteModule } from './visibilite/visibilite.module';
     FichiersModule,
     DossiersModule,
     GrapheModule,
+    CarteModule,
+    EnquetesModule,
     SignauxModule,
     SemencesModule,
     SanteModule,

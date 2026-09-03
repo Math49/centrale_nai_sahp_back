@@ -1,6 +1,3 @@
-
-
-
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["postgresqlExtensions"]
@@ -11,7 +8,6 @@ datasource db {
   url        = env("DATABASE_URL")
   extensions = [pg_trgm, unaccent]
 }
-
 
 enum Visibilite {
   public
@@ -49,21 +45,15 @@ model Entite {
   typeEntiteId String     @map("type_entite_id") @db.Uuid
   typeEntite   TypeEntite @relation(fields: [typeEntiteId], references: [id], onDelete: Restrict)
 
-  
-  
   libelle String
 
-  
-  
   valeurs Json @default("{}")
 
-  
   note String?
 
   visibilite Visibilite @default(public)
   etat       EtatEntite @default(actif)
 
-  
   fusionneeVersId String?  @map("fusionnee_vers_id") @db.Uuid
   fusionneeVers   Entite?  @relation("fusion", fields: [fusionneeVersId], references: [id], onDelete: Restrict)
   absorbees       Entite[] @relation("fusion")
@@ -82,10 +72,10 @@ model Entite {
   habilitations       HabilitationEntite[]
   positions           PositionGraphe[]
   consultations       JournalConsultation[]
+  cartesEnquete       CarteEnquete[]        @relation("carte_entite")
 
   @@map("entite")
 }
-
 
 model Fait {
   id String @id @default(uuid()) @db.Uuid
@@ -108,28 +98,18 @@ model Fait {
   cibleId String? @map("cible_id") @db.Uuid
   cible   Entite? @relation("fait_cible", fields: [cibleId], references: [id], onDelete: Restrict)
 
-  
   source String
 
-  
-  
   fiabilite Int @db.SmallInt
 
-  
-  
   dateConstatation DateTime @map("date_constatation") @db.Date
 
   etat EtatFait @default(actif)
 
   visibilite Visibilite @default(public)
 
-  
-  
-  
   visibiliteEffective Visibilite @default(public) @map("visibilite_effective")
 
-  
-  
   dossierId String?  @map("dossier_id") @db.Uuid
   dossier   Dossier? @relation(fields: [dossierId], references: [id], onDelete: Restrict)
 
@@ -150,8 +130,6 @@ model Fichier {
 
   nomOrigine String @map("nom_origine")
 
-  
-  
   chemin String @unique
 
   mime   String
@@ -166,12 +144,10 @@ model Fichier {
   @@map("fichier")
 }
 
-
 model Dossier {
   id  String @id @default(uuid()) @db.Uuid
   nom String @unique
 
-  
   entitePivotId String @map("entite_pivot_id") @db.Uuid
   entitePivot   Entite @relation("dossier_pivot", fields: [entitePivotId], references: [id], onDelete: Restrict)
 
@@ -188,10 +164,10 @@ model Dossier {
   faitsSaisisIci Fait[]
   positions      PositionGraphe[]
   consultations  JournalConsultation[]
+  cartesEnquete  CarteEnquete[]        @relation("carte_dossier")
 
   @@map("dossier")
 }
-
 
 model Suivi {
   dossierId String  @map("dossier_id") @db.Uuid
@@ -209,7 +185,6 @@ model Suivi {
   @@map("suivi")
 }
 
-
 model HabilitationDossier {
   dossierId String  @map("dossier_id") @db.Uuid
   dossier   Dossier @relation(fields: [dossierId], references: [id], onDelete: Cascade)
@@ -225,7 +200,6 @@ model HabilitationDossier {
   @@index([agentId])
   @@map("habilitation_dossier")
 }
-
 
 model HabilitationEntite {
   entiteId String @map("entite_id") @db.Uuid
@@ -243,14 +217,12 @@ model HabilitationEntite {
   @@map("habilitation_entite")
 }
 
-
 model PositionGraphe {
   id String @id @default(uuid()) @db.Uuid
 
   entiteId String @map("entite_id") @db.Uuid
   entite   Entite @relation(fields: [entiteId], references: [id], onDelete: Cascade)
 
-  
   dossierId String?  @map("dossier_id") @db.Uuid
   dossier   Dossier? @relation(fields: [dossierId], references: [id], onDelete: Cascade)
 
@@ -266,13 +238,10 @@ model PositionGraphe {
   @@map("position_graphe")
 }
 
-
 model ValeurUnique {
   typeEntiteId      String @map("type_entite_id") @db.Uuid
   definitionChampId String @map("definition_champ_id") @db.Uuid
 
-  
-  
   valeurNormalisee String @map("valeur_normalisee")
 
   entiteId String @map("entite_id") @db.Uuid
@@ -283,6 +252,12 @@ model ValeurUnique {
   @@map("valeur_unique")
 }
 
+enum NatureRepere {
+  point
+  zone
+
+  @@map("nature_repere")
+}
 
 enum TypeDonnee {
   texte
@@ -292,6 +267,7 @@ enum TypeDonnee {
   booleen
   liste
   fichier
+  carte
 
   @@map("type_donnee")
 }
@@ -310,8 +286,6 @@ model TypeEntite {
   libellePluriel String @map("libelle_pluriel")
   icone          String
 
-  
-  
   modeleLibelle String @map("modele_libelle")
 
   ordre Int @default(0)
@@ -339,7 +313,6 @@ model DefinitionChamp {
   estUnique   Boolean    @default(false) @map("est_unique")
   multiple    Boolean    @default(false)
 
-  
   options Json?
 
   ordre Int @default(0)
@@ -350,15 +323,12 @@ model DefinitionChamp {
   @@map("definition_champ")
 }
 
-
 model TypeLien {
   id             String @id @default(uuid()) @db.Uuid
   code           String @unique
   libelle        String
   libelleInverse String @map("libelle_inverse")
 
-  
-  
   typeEntiteSourceId String     @map("type_entite_source_id") @db.Uuid
   typeEntiteSource   TypeEntite @relation("type_lien_source", fields: [typeEntiteSourceId], references: [id], onDelete: Restrict)
 
@@ -388,7 +358,6 @@ model Onglet {
   @@map("onglet")
 }
 
-
 model OngletTypeLien {
   ongletId String @map("onglet_id") @db.Uuid
   onglet   Onglet @relation(fields: [ongletId], references: [id], onDelete: Cascade)
@@ -403,7 +372,6 @@ model OngletTypeLien {
   @@map("onglet_type_lien")
 }
 
-
 model Role {
   id          String   @id @default(uuid()) @db.Uuid
   code        String   @unique
@@ -416,11 +384,9 @@ model Role {
   @@map("role")
 }
 
-
 model Agent {
-  id        String @id @default(uuid()) @db.Uuid
-  
-  
+  id String @id @default(uuid()) @db.Uuid
+
   matricule String @unique
   prenom    String
   nom       String
@@ -428,16 +394,12 @@ model Agent {
   roleId String @map("role_id") @db.Uuid
   role   Role   @relation(fields: [roleId], references: [id], onDelete: Restrict)
 
-  
   superAdmin Boolean @default(false) @map("super_admin")
   actif      Boolean @default(true)
 
-  
-  
   motDePasseHash String? @map("mot_de_passe_hash")
   doitChangerMdp Boolean @default(true) @map("doit_changer_mdp")
 
-  
   tokenVersion Int @default(0) @map("token_version")
 
   anonymise   Boolean   @default(false)
@@ -459,9 +421,18 @@ model Agent {
   habilitationsEntiteDues  HabilitationEntite[]  @relation("habilitation_entite_auteur")
   positionsGraphe          PositionGraphe[]      @relation("position_auteur")
 
+  reperesCrees        Repere[]           @relation("repere_auteur")
+  cartesEnqueteCreees CarteEnquete[]     @relation("carte_enquete_auteur")
+  assignations        AssignationCarte[] @relation("assignation_carte_agent")
+  assignationsDues    AssignationCarte[] @relation("assignation_carte_auteur")
+
+  habilitationsCarte      HabilitationCarteEnquete[] @relation("habilitation_carte_agent")
+  habilitationsCarteDues  HabilitationCarteEnquete[] @relation("habilitation_carte_auteur")
+  habilitationsRepere     HabilitationRepere[]       @relation("habilitation_repere_agent")
+  habilitationsRepereDues HabilitationRepere[]       @relation("habilitation_repere_auteur")
+
   @@map("agent")
 }
-
 
 model JournalConsultation {
   id BigInt @id @default(autoincrement())
@@ -487,7 +458,6 @@ model JournalConsultation {
   @@map("journal_consultation")
 }
 
-
 model JournalAudit {
   id BigInt @id @default(autoincrement())
 
@@ -505,4 +475,188 @@ model JournalAudit {
   @@index([cibleTable, cibleId])
   @@index([effectueLe])
   @@map("journal_audit")
+}
+
+// ─────────────────────────── Carte ───────────────────────────
+
+/// Un type de repère — QG, labo, braquage, secteur surveillé.
+///
+/// Configuré par le super-admin, comme le reste du référentiel. `nature` évite
+/// une liste absurde au moment de dessiner : un type « QG » ne s'applique pas à
+/// une zone, « secteur surveillé » pas à un point.
+///
+/// **Le type ne porte pas de couleur.** Elle se choisit à la pose, sur l'objet :
+/// deux planques n'appellent pas le même signalement selon l'affaire.
+model TypeRepere {
+  id      String       @id @default(uuid()) @db.Uuid
+  code    String       @unique
+  libelle String
+  nature  NatureRepere
+  icone   String
+  ordre   Int          @default(0)
+
+  reperes Repere[]
+
+  @@map("type_repere")
+}
+
+/// Un repère posé sur le plan de la centrale.
+///
+/// `geometrie` porte la forme, en coordonnées normalisées entre 0 et 1 :
+/// `{"type":"point","x":…,"y":…}`, `{"type":"rectangle","a":{…},"b":{…}}` ou
+/// `{"type":"cercle","centre":{…},"rayon":…}`. Un seul champ, validé à
+/// l'écriture, comme `Fait.valeur`.
+///
+/// Une zone est un rectangle ou un rond, jamais un polygone libre : on la trace
+/// en deux clics, et le tracé sommet par sommet ne servait personne.
+model Repere {
+  id String @id @default(uuid()) @db.Uuid
+
+  typeRepereId String     @map("type_repere_id") @db.Uuid
+  typeRepere   TypeRepere @relation(fields: [typeRepereId], references: [id], onDelete: Restrict)
+
+  geometrie Json
+  libelle   String
+  note      String?
+
+  /// Choisie à la pose. Le type n'en porte pas : c'est le repère qui se signale.
+  couleur String
+  opacite Float?
+
+  visibilite Visibilite @default(public)
+  etat       EtatEntite @default(actif)
+
+  creePar String   @map("cree_par") @db.Uuid
+  auteur  Agent    @relation("repere_auteur", fields: [creePar], references: [id], onDelete: Restrict)
+  creeLe  DateTime @default(now()) @map("cree_le") @db.Timestamptz(6)
+
+  modifiePar String?   @map("modifie_par") @db.Uuid
+  modifieLe  DateTime  @updatedAt @map("modifie_le") @db.Timestamptz(6)
+  archiveLe  DateTime? @map("archive_le") @db.Timestamptz(6)
+
+  habilitations HabilitationRepere[]
+
+  @@index([etat])
+  @@map("repere")
+}
+
+/// Whitelist d'un repère.
+///
+/// La position *est* le renseignement : un repère classé n'est pas montré muet,
+/// il est absent. Il faut donc pouvoir rouvrir nommément, comme pour un dossier
+/// ou une donnée.
+model HabilitationRepere {
+  repereId String @map("repere_id") @db.Uuid
+  repere   Repere @relation(fields: [repereId], references: [id], onDelete: Cascade)
+
+  agentId String @map("agent_id") @db.Uuid
+  agent   Agent  @relation("habilitation_repere_agent", fields: [agentId], references: [id], onDelete: Restrict)
+
+  accordePar String   @map("accorde_par") @db.Uuid
+  auteur     Agent    @relation("habilitation_repere_auteur", fields: [accordePar], references: [id], onDelete: Restrict)
+  accordeLe  DateTime @default(now()) @map("accorde_le") @db.Timestamptz(6)
+
+  @@id([repereId, agentId])
+  @@index([agentId])
+  @@map("habilitation_repere")
+}
+
+// ────────────────────────── Enquêtes ──────────────────────────
+
+/// Une colonne du tableau — « à faire », « en cours », « en attente »…
+///
+/// Configurée par le super-admin, comme le reste du référentiel : l'état
+/// d'avancement d'une enquête est une convention de service, pas une donnée.
+model ColonneKanban {
+  id      String @id @default(uuid()) @db.Uuid
+  code    String @unique
+  libelle String
+  ordre   Int    @default(0)
+
+  cartes CarteEnquete[]
+
+  @@map("colonne_kanban")
+}
+
+/// Une carte du tableau des enquêtes.
+///
+/// Libre : elle n'est pas un dossier ni une donnée. Elle peut *pointer* vers
+/// l'un ou l'autre, sans y être contrainte — un travail commence souvent avant
+/// qu'on sache ce qu'il vise.
+model CarteEnquete {
+  id String @id @default(uuid()) @db.Uuid
+
+  colonneId String        @map("colonne_id") @db.Uuid
+  colonne   ColonneKanban @relation(fields: [colonneId], references: [id], onDelete: Restrict)
+
+  /// Rang dans sa colonne. Le déplacement réécrit le jeu complet de la colonne.
+  rang Int @default(0)
+
+  titre       String
+  description String?
+  echeance    DateTime? @db.Date
+
+  dossierId String?  @map("dossier_id") @db.Uuid
+  dossier   Dossier? @relation("carte_dossier", fields: [dossierId], references: [id], onDelete: Restrict)
+
+  entiteId String? @map("entite_id") @db.Uuid
+  entite   Entite? @relation("carte_entite", fields: [entiteId], references: [id], onDelete: Restrict)
+
+  visibilite Visibilite @default(public)
+  etat       EtatEntite @default(actif)
+
+  creePar String   @map("cree_par") @db.Uuid
+  auteur  Agent    @relation("carte_enquete_auteur", fields: [creePar], references: [id], onDelete: Restrict)
+  creeLe  DateTime @default(now()) @map("cree_le") @db.Timestamptz(6)
+
+  modifiePar String?   @map("modifie_par") @db.Uuid
+  modifieLe  DateTime  @updatedAt @map("modifie_le") @db.Timestamptz(6)
+  archiveLe  DateTime? @map("archive_le") @db.Timestamptz(6)
+
+  assignations  AssignationCarte[]
+  habilitations HabilitationCarteEnquete[]
+
+  @@index([colonneId, rang])
+  @@index([etat])
+  @@map("carte_enquete")
+}
+
+/// Qui s'occupe d'une carte.
+///
+/// **Ce n'est pas une habilitation.** Assigner dit qui travaille ; habiliter dit
+/// qui a le droit de lire. Assigner un agent à une carte classée ne la lui ouvre
+/// pas — on confie parfois un travail dont le détail n'est pas encore partagé,
+/// et une assignation qui ouvrirait l'accès serait une porte dérobée dans le
+/// moteur de visibilité.
+model AssignationCarte {
+  carteId String       @map("carte_id") @db.Uuid
+  carte   CarteEnquete @relation(fields: [carteId], references: [id], onDelete: Cascade)
+
+  agentId String @map("agent_id") @db.Uuid
+  agent   Agent  @relation("assignation_carte_agent", fields: [agentId], references: [id], onDelete: Restrict)
+
+  assignePar String   @map("assigne_par") @db.Uuid
+  auteur     Agent    @relation("assignation_carte_auteur", fields: [assignePar], references: [id], onDelete: Restrict)
+  assigneLe  DateTime @default(now()) @map("assigne_le") @db.Timestamptz(6)
+
+  @@id([carteId, agentId])
+  @@index([agentId])
+  @@map("assignation_carte")
+}
+
+/// Whitelist d'une carte d'enquête.
+model HabilitationCarteEnquete {
+  carteId String       @map("carte_id") @db.Uuid
+  carte   CarteEnquete @relation(fields: [carteId], references: [id], onDelete: Cascade)
+
+  agentId String @map("agent_id") @db.Uuid
+  agent   Agent  @relation("habilitation_carte_agent", fields: [agentId], references: [id], onDelete: Restrict)
+
+  accordePar String   @map("accorde_par") @db.Uuid
+  auteur     Agent    @relation("habilitation_carte_auteur", fields: [accordePar], references: [id], onDelete: Restrict)
+  accordeLe  DateTime @default(now()) @map("accorde_le") @db.Timestamptz(6)
+
+  @@id([carteId, agentId])
+  @@index([agentId])
+  @@map("habilitation_carte_enquete")
 }

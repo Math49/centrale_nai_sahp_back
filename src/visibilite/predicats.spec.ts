@@ -21,6 +21,8 @@ function contexte(
     derogationPrive: false,
     dossiersHabilites: [],
     entitesHabilitees: [],
+    reperesHabilites: [],
+    cartesHabilitees: [],
     ...ajustements,
   };
 }

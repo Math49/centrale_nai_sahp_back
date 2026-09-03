@@ -128,8 +128,8 @@ export class EntitesService {
       await this.verifierDossier(donnees.dossierId);
     }
 
-    const champsPrepares = champsSaisis.map((saisi) =>
-      this.preparerChamp(type, saisi, donnees),
+    const champsPrepares = await Promise.all(
+      champsSaisis.map((saisi) => this.preparerChamp(type, saisi, donnees)),
     );
 
     const liensPrepares = await this.preparerLiens(type, liensSaisis, donnees);
@@ -840,15 +840,15 @@ export class EntitesService {
     }
   }
 
-  private preparerChamp(
+  private async preparerChamp(
     type: TypeAvecChamps,
     saisi: ChampSaisiDto,
     defauts: CreationEntiteDto,
-  ): {
+  ): Promise<{
     definitionChampId: string;
     valeur: Prisma.InputJsonValue;
     provenance: Provenance;
-  } {
+  }> {
     const definition = type.champs.find(
       (champ) => champ.id === saisi.definitionChampId,
     );
@@ -859,7 +859,7 @@ export class EntitesService {
 
     return {
       definitionChampId: definition.id,
-      valeur: this.validation.valider(definition, saisi.valeur),
+      valeur: await this.validation.valider(definition, saisi.valeur),
       provenance: this.resoudreProvenance(saisi, defauts),
     };
   }

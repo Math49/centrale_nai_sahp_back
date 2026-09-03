@@ -323,6 +323,8 @@ export class MadrinaService {
         role: true,
         habilitationsDossier: { select: { dossierId: true } },
         habilitationsEntite: { select: { entiteId: true } },
+        habilitationsRepere: { select: { repereId: true } },
+        habilitationsCarte: { select: { carteId: true } },
       },
     });
 
@@ -341,6 +343,12 @@ export class MadrinaService {
       ),
       entitesHabilitees: agent.habilitationsEntite.map(
         (habilitation) => habilitation.entiteId,
+      ),
+      reperesHabilites: agent.habilitationsRepere.map(
+        (habilitation) => habilitation.repereId,
+      ),
+      cartesHabilitees: agent.habilitationsCarte.map(
+        (habilitation) => habilitation.carteId,
       ),
     };
   }

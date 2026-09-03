@@ -21,6 +21,7 @@ import {
   appliquerGabarit,
   extraireCles,
   verifierClesDuGabarit,
+  verifierTypesDuGabarit,
   verifierSyntaxeGabarit,
 } from './gabarit';
 import type {
@@ -124,6 +125,7 @@ export class ReferentielService {
         donnees.modeleLibelle,
         avant.champs.map((champ) => champ.cle),
       );
+      verifierTypesDuGabarit(donnees.modeleLibelle, avant.champs);
     }
 
     const apres = await this.executer(() =>
@@ -683,6 +685,20 @@ export class ReferentielService {
     if (donnees.estUnique && typeDonnee === TypeDonnee.fichier) {
       throw new BadRequestException(
         "l'unicité ne s'applique pas à un fichier — deux photos identiques ne sont pas une contradiction",
+      );
+    }
+
+    /*
+     * L'unicité d'un point n'a pas de sens, et elle serait pire qu'inutile.
+     *
+     * `valeur_unique` indexe la forme *textuelle* de la valeur : deux points
+     * cliqués à un pixel près donneraient deux clés distinctes, et deux points
+     * réellement confondus verrouilleraient une position pour toute la
+     * centrale. Deux planques peuvent partager une adresse.
+     */
+    if (donnees.estUnique && typeDonnee === TypeDonnee.carte) {
+      throw new BadRequestException(
+        "l'unicité ne s'applique pas à un point — deux données peuvent occuper le même endroit",
       );
     }
   }

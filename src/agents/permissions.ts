@@ -13,6 +13,8 @@ export const PERMISSIONS = {
   ENTITE_CONSULTER: 'entite.consulter',
   DOSSIER_CONSULTER: 'dossier.consulter',
   GRAPHE_CONSULTER: 'graphe.consulter',
+  CARTE_CONSULTER: 'carte.consulter',
+  KANBAN_CONSULTER: 'kanban.consulter',
 
   ENTITE_CREER: 'entite.creer',
   ENTITE_MODIFIER: 'entite.modifier',
@@ -38,6 +40,28 @@ export const PERMISSIONS = {
 
   GRAPHE_REPOSITIONNER: 'graphe.repositionner',
 
+  /**
+   * Repères de la carte.
+   *
+   * Le classement en restreint ou privé reste sous `visibilite.definir`, et
+   * l'habilitation nominative sous `dossier.habiliter` : on ne double pas des
+   * gestes qui existent. Ces deux-ci décrivent ce que la carte ajoute — poser
+   * un repère, et le retirer du plan.
+   */
+  CARTE_ANNOTER: 'carte.annoter',
+  CARTE_ARCHIVER: 'carte.archiver',
+
+  /**
+   * Tableau des enquêtes.
+   *
+   * `kanban.ecrire` couvre aussi l'**assignation** : désigner qui travaille sur
+   * quoi est une modification de la carte comme une autre. L'habilitation, elle,
+   * reste sous `dossier.habiliter` — un geste d'une tout autre portée, qui ne se
+   * délègue pas par la bande.
+   */
+  KANBAN_ECRIRE: 'kanban.ecrire',
+  KANBAN_ARCHIVER: 'kanban.archiver',
+
   AGENT_GERER: 'agent.gerer',
   ROLE_GERER: 'role.gerer',
 
@@ -53,6 +77,8 @@ export const LIBELLES_PERMISSIONS: Record<Permission, string> = {
   [PERMISSIONS.ENTITE_CONSULTER]: 'Consulter l’annuaire et les fiches',
   [PERMISSIONS.DOSSIER_CONSULTER]: 'Consulter les dossiers',
   [PERMISSIONS.GRAPHE_CONSULTER]: 'Consulter le graphe',
+  [PERMISSIONS.CARTE_CONSULTER]: 'Consulter la carte',
+  [PERMISSIONS.KANBAN_CONSULTER]: 'Consulter le tableau des enquêtes',
   [PERMISSIONS.ENTITE_CREER]: 'Créer une entité',
   [PERMISSIONS.ENTITE_MODIFIER]: 'Modifier une entité',
   [PERMISSIONS.ENTITE_ARCHIVER]: 'Archiver une entité',
@@ -72,6 +98,11 @@ export const LIBELLES_PERMISSIONS: Record<Permission, string> = {
   [PERMISSIONS.HISTORIQUE_CONSULTER]: "Consulter l'onglet Historique",
   [PERMISSIONS.JOURNAL_CONSULTER]: 'Consulter les journaux',
   [PERMISSIONS.GRAPHE_REPOSITIONNER]: 'Repositionner le graphe pour tous',
+  [PERMISSIONS.CARTE_ANNOTER]: 'Poser et modifier un repère sur la carte',
+  [PERMISSIONS.CARTE_ARCHIVER]: 'Retirer un repère de la carte',
+  [PERMISSIONS.KANBAN_ECRIRE]:
+    'Créer, modifier, déplacer et assigner une carte d’enquête',
+  [PERMISSIONS.KANBAN_ARCHIVER]: 'Archiver une carte d’enquête',
   [PERMISSIONS.AGENT_GERER]: 'Créer et modifier des comptes',
   [PERMISSIONS.ROLE_GERER]: 'Configurer les grades et leurs permissions',
   [PERMISSIONS.AGENT_ANONYMISER]: 'Anonymiser un compte',

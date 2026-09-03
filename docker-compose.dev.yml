@@ -47,7 +47,10 @@ services:
       NODE_ENV: development
       PORT: '40511'
       DATABASE_URL: postgresql://ni:ni@postgres:5432/centrale_ni?schema=public
-      CORS_ORIGINES: http://localhost:40510
+      # Le front de développement écoute sur 3001 (.claude/launch.json et
+      # FRONT_PORT). 40510 reste listé pour l'ancien réglage : la variable
+      # accepte une liste séparée par des virgules.
+      CORS_ORIGINES: http://localhost:3001,http://localhost:40510
       SWAGGER_ACTIF: 'true'
 
 

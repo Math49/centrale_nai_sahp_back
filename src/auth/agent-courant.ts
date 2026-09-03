@@ -16,6 +16,8 @@ export interface AgentCourant {
 
   dossiersHabilites: string[];
   entitesHabilitees: string[];
+  reperesHabilites: string[];
+  cartesHabilitees: string[];
 }
 
 export interface RequeteAuthentifiee extends Request {

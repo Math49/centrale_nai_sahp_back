@@ -8,6 +8,17 @@ import { PrismaService } from '../src/prisma/prisma.service';
 
 const TABLES = [
   'journal_audit',
+  // Enfants d'abord : `TRUNCATE ... CASCADE` s'en charge, mais les nommer
+  // garde la liste lisible et évite qu'un oubli survive d'une suite à l'autre.
+  // C'est ce qui est arrivé aux types de repères : leur `code` unique tenait
+  // d'un fichier de recette au suivant, et la création repartait en 409.
+  'habilitation_carte_enquete',
+  'assignation_carte',
+  'carte_enquete',
+  'colonne_kanban',
+  'habilitation_repere',
+  'repere',
+  'type_repere',
   'valeur_unique',
   'fait',
   'fichier',

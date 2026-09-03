@@ -2623,6 +2623,967 @@
         ]
       }
     },
+    "/carte/types-reperes": {
+      "get": {
+        "description": "Lisible par qui consulte la carte : il faut pouvoir nommer et dessiner ce qu’on voit.",
+        "operationId": "CarteController_listerTypes",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TypeRepereDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Catalogue des types de repères",
+        "tags": [
+          "carte"
+        ]
+      },
+      "post": {
+        "description": "Configuration du modèle métier — réservée au super-admin, comme les types de données et de liens.",
+        "operationId": "CarteController_creerType",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreationTypeRepereDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TypeRepereDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Code déjà utilisé"
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Création d’un type de repère",
+        "tags": [
+          "carte"
+        ]
+      }
+    },
+    "/carte/types-reperes/{id}": {
+      "patch": {
+        "operationId": "CarteController_modifierType",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificationTypeRepereDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TypeRepereDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "tags": [
+          "carte"
+        ]
+      },
+      "delete": {
+        "operationId": "CarteController_supprimerType",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "409": {
+            "description": "Type encore utilisé"
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "tags": [
+          "carte"
+        ]
+      }
+    },
+    "/carte/types-reperes/ordre": {
+      "post": {
+        "operationId": "CarteController_ordonnerTypes",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrdreDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "tags": [
+          "carte"
+        ]
+      }
+    },
+    "/carte/reperes": {
+      "get": {
+        "description": "Un repère classé hors de portée n’est **pas** montré muet : il est absent. Sur une carte, la position est le renseignement.",
+        "operationId": "CarteController_listerReperes",
+        "parameters": [
+          {
+            "name": "archives",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RepereDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Repères visibles",
+        "tags": [
+          "carte"
+        ]
+      },
+      "post": {
+        "operationId": "CarteController_creerRepere",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreationRepereDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RepereDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Poser un repère",
+        "tags": [
+          "carte"
+        ]
+      }
+    },
+    "/carte/donnees": {
+      "get": {
+        "description": "Chaque champ de type carte, filtré par la règle des gardiens comme n’importe quel fait. Exige aussi de pouvoir consulter les données : ce sont elles qu’on lit ici.",
+        "operationId": "CarteController_pointsDesDonnees",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PointDeDonneeDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Points portés par les fiches",
+        "tags": [
+          "carte"
+        ]
+      }
+    },
+    "/carte/reperes/{id}": {
+      "patch": {
+        "operationId": "CarteController_modifierRepere",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificationRepereDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RepereDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "tags": [
+          "carte"
+        ]
+      }
+    },
+    "/carte/reperes/{id}/archiver": {
+      "post": {
+        "description": "Archivage, jamais suppression : ce qu’on a cru savoir d’un terrain fait partie de l’enquête, même quand on cesse d’y croire.",
+        "operationId": "CarteController_archiver",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RepereDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Retirer un repère de la carte",
+        "tags": [
+          "carte"
+        ]
+      }
+    },
+    "/carte/reperes/{id}/desarchiver": {
+      "post": {
+        "operationId": "CarteController_desarchiver",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RepereDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "tags": [
+          "carte"
+        ]
+      }
+    },
+    "/carte/reperes/{id}/habilitations": {
+      "post": {
+        "description": "Nominative, jamais déduite d’un grade. Le seul moyen de rouvrir un repère classé à qui n’a pas de dérogation.",
+        "operationId": "CarteController_habiliter",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DesignationAgentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Habiliter un agent sur un repère",
+        "tags": [
+          "carte"
+        ]
+      }
+    },
+    "/carte/reperes/{id}/habilitations/{agentId}": {
+      "delete": {
+        "operationId": "CarteController_retirerHabilitation",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "agentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "tags": [
+          "carte"
+        ]
+      }
+    },
+    "/enquetes/colonnes": {
+      "get": {
+        "description": "Lisibles par qui consulte le tableau : sans elles, il n’y a rien à afficher.",
+        "operationId": "EnquetesController_listerColonnes",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ColonneKanbanDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Colonnes du tableau",
+        "tags": [
+          "enquetes"
+        ]
+      },
+      "post": {
+        "description": "L’état d’avancement d’une enquête est une convention de service : sa configuration relève du super-admin, comme le reste du modèle.",
+        "operationId": "EnquetesController_creerColonne",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreationColonneDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ColonneKanbanDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Code déjà utilisé"
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Création d’une colonne",
+        "tags": [
+          "enquetes"
+        ]
+      }
+    },
+    "/enquetes/colonnes/{id}": {
+      "patch": {
+        "operationId": "EnquetesController_modifierColonne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificationColonneDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ColonneKanbanDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "tags": [
+          "enquetes"
+        ]
+      },
+      "delete": {
+        "operationId": "EnquetesController_supprimerColonne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "409": {
+            "description": "Colonne encore utilisée"
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "tags": [
+          "enquetes"
+        ]
+      }
+    },
+    "/enquetes/colonnes/ordre": {
+      "post": {
+        "operationId": "EnquetesController_ordonnerColonnes",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrdreDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "tags": [
+          "enquetes"
+        ]
+      }
+    },
+    "/enquetes/cartes": {
+      "get": {
+        "description": "Une carte classée hors de portée n’apparaît pas — pas même anonyme : son titre nomme souvent ce qu’un dossier restreint protège.",
+        "operationId": "EnquetesController_listerCartes",
+        "parameters": [
+          {
+            "name": "archives",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CarteEnqueteDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Cartes visibles",
+        "tags": [
+          "enquetes"
+        ]
+      },
+      "post": {
+        "description": "Les comptes assignés disent qui s’en occupe. **Ils n’ouvrent aucun accès** : une carte classée demande en plus une habilitation nominative.",
+        "operationId": "EnquetesController_creerCarte",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreationCarteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarteEnqueteDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Création d’une carte",
+        "tags": [
+          "enquetes"
+        ]
+      }
+    },
+    "/enquetes/cartes/{id}": {
+      "patch": {
+        "operationId": "EnquetesController_modifierCarte",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificationCarteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarteEnqueteDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "tags": [
+          "enquetes"
+        ]
+      }
+    },
+    "/enquetes/cartes/{id}/deplacer": {
+      "post": {
+        "description": "Vers une autre colonne ou dans la sienne. Les rangs des colonnes touchées sont réécrits en entier.",
+        "operationId": "EnquetesController_deplacerCarte",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeplacementCarteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarteEnqueteDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Déplacer une carte",
+        "tags": [
+          "enquetes"
+        ]
+      }
+    },
+    "/enquetes/cartes/{id}/archiver": {
+      "post": {
+        "description": "Archivage, jamais suppression : une carte raconte une décision de travail, et cela se relit.",
+        "operationId": "EnquetesController_archiver",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarteEnqueteDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Archiver une carte",
+        "tags": [
+          "enquetes"
+        ]
+      }
+    },
+    "/enquetes/cartes/{id}/desarchiver": {
+      "post": {
+        "operationId": "EnquetesController_desarchiver",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarteEnqueteDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "tags": [
+          "enquetes"
+        ]
+      }
+    },
+    "/enquetes/cartes/{id}/habilitations": {
+      "post": {
+        "description": "Le seul geste qui ouvre l’accès. Assigner ne suffit pas, et c’est délibéré.",
+        "operationId": "EnquetesController_habiliter",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DesignationAgentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Habiliter un agent sur une carte",
+        "tags": [
+          "enquetes"
+        ]
+      }
+    },
+    "/enquetes/cartes/{id}/habilitations/{agentId}": {
+      "delete": {
+        "operationId": "EnquetesController_retirerHabilitation",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "agentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "tags": [
+          "enquetes"
+        ]
+      }
+    },
     "/accueil": {
       "get": {
         "description": "Signaux, dossiers de l’agent et dernière activité en une requête. Tout y est calculé **après** filtrage de visibilité : un signal portant sur un objet inaccessible ne remonte pas, sa seule mention en révélerait l’existence.",
@@ -3263,7 +4224,8 @@
               "datetime",
               "booleen",
               "liste",
-              "fichier"
+              "fichier",
+              "carte"
             ],
             "type": "string"
           },
@@ -3625,7 +4587,8 @@
               "datetime",
               "booleen",
               "liste",
-              "fichier"
+              "fichier",
+              "carte"
             ],
             "type": "string"
           },
@@ -3935,6 +4898,26 @@
                 "type": "boolean"
               },
               {
+                "type": "object",
+                "description": "Point de carte, coordonnées normalisées entre 0 et 1",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  }
+                },
+                "required": [
+                  "x",
+                  "y"
+                ]
+              },
+              {
                 "type": "array",
                 "items": {}
               }
@@ -4001,7 +4984,8 @@
               "datetime",
               "booleen",
               "liste",
-              "fichier"
+              "fichier",
+              "carte"
             ],
             "type": "string"
           },
@@ -4019,6 +5003,26 @@
               },
               {
                 "type": "boolean"
+              },
+              {
+                "type": "object",
+                "description": "Point de carte, coordonnées normalisées entre 0 et 1",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  }
+                },
+                "required": [
+                  "x",
+                  "y"
+                ]
               },
               {
                 "type": "array",
@@ -4407,9 +5411,29 @@
               },
               {
                 "type": "boolean"
+              },
+              {
+                "type": "object",
+                "description": "Point de carte, coordonnées normalisées entre 0 et 1",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  }
+                },
+                "required": [
+                  "x",
+                  "y"
+                ]
               }
             ],
-            "description": "Texte, nombre, booléen ou valeur de liste, selon le type du champ"
+            "description": "Texte, nombre, booléen, valeur de liste ou point de carte, selon le type du champ"
           }
         },
         "required": [
@@ -4814,6 +5838,26 @@
               },
               {
                 "type": "boolean"
+              },
+              {
+                "type": "object",
+                "description": "Point de carte, coordonnées normalisées entre 0 et 1",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  }
+                },
+                "required": [
+                  "x",
+                  "y"
+                ]
               }
             ],
             "description": "Si nature = champ"
@@ -4900,6 +5944,26 @@
               },
               {
                 "type": "boolean"
+              },
+              {
+                "type": "object",
+                "description": "Point de carte, coordonnées normalisées entre 0 et 1",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  }
+                },
+                "required": [
+                  "x",
+                  "y"
+                ]
               },
               {
                 "type": "array",
@@ -4998,6 +6062,26 @@
               },
               {
                 "type": "boolean"
+              },
+              {
+                "type": "object",
+                "description": "Point de carte, coordonnées normalisées entre 0 et 1",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  }
+                },
+                "required": [
+                  "x",
+                  "y"
+                ]
               }
             ],
             "description": "Champ seulement — la cible d’un lien ne se corrige pas"
@@ -5293,6 +6377,697 @@
         },
         "required": [
           "positions"
+        ]
+      },
+      "TypeRepereDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string",
+            "example": "labo"
+          },
+          "libelle": {
+            "type": "string",
+            "example": "Laboratoire"
+          },
+          "nature": {
+            "enum": [
+              "point",
+              "zone"
+            ],
+            "type": "string"
+          },
+          "icone": {
+            "type": "string",
+            "example": "fas:flask"
+          },
+          "ordre": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "libelle",
+          "nature",
+          "icone",
+          "ordre"
+        ]
+      },
+      "CreationTypeRepereDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "maxLength": 64,
+            "example": "labo"
+          },
+          "libelle": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "example": "Laboratoire"
+          },
+          "nature": {
+            "enum": [
+              "point",
+              "zone"
+            ],
+            "type": "string",
+            "description": "Définitive : un type de point ne devient pas un type de zone, les repères déjà posés en dépendent"
+          },
+          "icone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "example": "fas:flask",
+            "description": "Le type ne porte pas de couleur : elle se choisit à la pose, sur le repère"
+          }
+        },
+        "required": [
+          "code",
+          "libelle",
+          "nature",
+          "icone"
+        ]
+      },
+      "ModificationTypeRepereDto": {
+        "type": "object",
+        "properties": {
+          "libelle": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "icone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          }
+        }
+      },
+      "RepereDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "typeRepereId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "typeRepereCode": {
+            "type": "string"
+          },
+          "typeRepereLibelle": {
+            "type": "string"
+          },
+          "nature": {
+            "enum": [
+              "point",
+              "zone"
+            ],
+            "type": "string"
+          },
+          "icone": {
+            "type": "string",
+            "description": "Icône du type"
+          },
+          "couleur": {
+            "type": "string",
+            "description": "Choisie à la pose ; le type n’en porte pas"
+          },
+          "opacite": {
+            "type": "number",
+            "nullable": true
+          },
+          "geometrie": {
+            "type": "object",
+            "description": "Géométrie normalisée : { type:\"point\", x, y }, { type:\"rectangle\", a, b } ou { type:\"cercle\", centre, rayon }",
+            "additionalProperties": true
+          },
+          "libelle": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "visibilite": {
+            "enum": [
+              "public",
+              "restreint",
+              "prive"
+            ],
+            "type": "string"
+          },
+          "etat": {
+            "enum": [
+              "actif",
+              "archive"
+            ],
+            "type": "string"
+          },
+          "auteurLibelle": {
+            "type": "string",
+            "description": "Prêt à l’affichage"
+          },
+          "creeLe": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "modifieLe": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "habilitations": {
+            "description": "Whitelist. Nécessaire dès que le repère est classé : un repère restreint est absent de la carte, pas montré muet.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentHabiliteDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "typeRepereId",
+          "typeRepereCode",
+          "typeRepereLibelle",
+          "nature",
+          "icone",
+          "couleur",
+          "opacite",
+          "geometrie",
+          "libelle",
+          "note",
+          "visibilite",
+          "etat",
+          "auteurLibelle",
+          "creeLe",
+          "modifieLe",
+          "habilitations"
+        ]
+      },
+      "PointDto": {
+        "type": "object",
+        "properties": {
+          "x": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "y": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "required": [
+          "x",
+          "y"
+        ]
+      },
+      "PointDeDonneeDto": {
+        "type": "object",
+        "properties": {
+          "entiteId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "La donnée qui porte le point"
+          },
+          "entiteLibelle": {
+            "type": "string"
+          },
+          "typeEntiteCode": {
+            "type": "string"
+          },
+          "icone": {
+            "type": "string",
+            "description": "Icône à afficher : celle du type de repère choisi à la pose, sinon celle du type de donnée"
+          },
+          "couleur": {
+            "type": "string",
+            "description": "Couleur choisie à la pose, sinon l’accent de la centrale"
+          },
+          "typeRepereId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid",
+            "description": "Type de repère choisi à la pose, s’il y en a un"
+          },
+          "typeRepereLibelle": {
+            "type": "string",
+            "nullable": true
+          },
+          "champLibelle": {
+            "type": "string",
+            "description": "Libellé du champ qui porte le point"
+          },
+          "point": {
+            "$ref": "#/components/schemas/PointDto"
+          },
+          "fiabilite": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 4
+          },
+          "visibilite": {
+            "enum": [
+              "public",
+              "restreint",
+              "prive"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "entiteId",
+          "entiteLibelle",
+          "typeEntiteCode",
+          "icone",
+          "couleur",
+          "typeRepereId",
+          "typeRepereLibelle",
+          "champLibelle",
+          "point",
+          "fiabilite",
+          "visibilite"
+        ]
+      },
+      "CreationRepereDto": {
+        "type": "object",
+        "properties": {
+          "typeRepereId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "geometrie": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "{ type:\"point\", x, y } pour un type de nature point ; { type:\"rectangle\", a, b } ou { type:\"cercle\", centre, rayon } pour une zone"
+          },
+          "libelle": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "example": "Labo présumé — hangar 4"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "couleur": {
+            "type": "string",
+            "pattern": "^#?([0-9A-F]{3}|[0-9A-F]{4}|[0-9A-F]{6}|[0-9A-F]{8})$",
+            "example": "#d99a5b",
+            "description": "Obligatoire : c’est le repère qui se signale, pas son type"
+          },
+          "opacite": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "visibilite": {
+            "enum": [
+              "public",
+              "restreint",
+              "prive"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "typeRepereId",
+          "geometrie",
+          "libelle",
+          "couleur"
+        ]
+      },
+      "ModificationRepereDto": {
+        "type": "object",
+        "properties": {
+          "geometrie": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "libelle": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 2000,
+            "nullable": true
+          },
+          "couleur": {
+            "type": "string",
+            "pattern": "^#?([0-9A-F]{3}|[0-9A-F]{4}|[0-9A-F]{6}|[0-9A-F]{8})$"
+          },
+          "opacite": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "visibilite": {
+            "enum": [
+              "public",
+              "restreint",
+              "prive"
+            ],
+            "type": "string"
+          }
+        }
+      },
+      "ColonneKanbanDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string",
+            "example": "en_cours"
+          },
+          "libelle": {
+            "type": "string",
+            "example": "En cours"
+          },
+          "ordre": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "libelle",
+          "ordre"
+        ]
+      },
+      "CreationColonneDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "maxLength": 64,
+            "example": "en_cours"
+          },
+          "libelle": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "example": "En cours"
+          }
+        },
+        "required": [
+          "code",
+          "libelle"
+        ]
+      },
+      "ModificationColonneDto": {
+        "type": "object",
+        "properties": {
+          "libelle": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        }
+      },
+      "RattachementCarteDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "libelle": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nul lorsque l’objet rattaché n’est pas consultable — le lien existe, son contenu non"
+          }
+        },
+        "required": [
+          "id",
+          "libelle"
+        ]
+      },
+      "AgentAssigneDto": {
+        "type": "object",
+        "properties": {
+          "agentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "libelle": {
+            "type": "string",
+            "description": "« agent supprimé » si le compte est anonymisé"
+          },
+          "matricule": {
+            "type": "string"
+          },
+          "initiales": {
+            "type": "string",
+            "description": "Initiales, pour la pastille du tableau. Deux lettres au plus, « ? » si le compte est anonymisé."
+          },
+          "peutLire": {
+            "type": "boolean",
+            "description": "Cet agent peut-il réellement lire la carte ? Assigner n’habilite pas."
+          },
+          "assigneLe": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "agentId",
+          "libelle",
+          "matricule",
+          "initiales",
+          "peutLire",
+          "assigneLe"
+        ]
+      },
+      "CarteEnqueteDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "colonneId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rang": {
+            "type": "number"
+          },
+          "titre": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "echeance": {
+            "type": "string",
+            "nullable": true,
+            "format": "date"
+          },
+          "dossier": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RattachementCarteDto"
+              }
+            ]
+          },
+          "entite": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RattachementCarteDto"
+              }
+            ]
+          },
+          "assignes": {
+            "description": "Qui s’en occupe. Sans effet sur le droit de lire.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentAssigneDto"
+            }
+          },
+          "visibilite": {
+            "enum": [
+              "public",
+              "restreint",
+              "prive"
+            ],
+            "type": "string"
+          },
+          "etat": {
+            "enum": [
+              "actif",
+              "archive"
+            ],
+            "type": "string"
+          },
+          "auteurLibelle": {
+            "type": "string"
+          },
+          "creeLe": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "modifieLe": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "habilitations": {
+            "description": "Whitelist. C’est elle, et non l’assignation, qui ouvre l’accès.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentHabiliteDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "colonneId",
+          "rang",
+          "titre",
+          "description",
+          "echeance",
+          "dossier",
+          "entite",
+          "assignes",
+          "visibilite",
+          "etat",
+          "auteurLibelle",
+          "creeLe",
+          "modifieLe",
+          "habilitations"
+        ]
+      },
+      "CreationCarteDto": {
+        "type": "object",
+        "properties": {
+          "colonneId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "titre": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "example": "Identifier le fournisseur de Los Vagos"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 4000
+          },
+          "echeance": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-09-30"
+          },
+          "dossierId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "entiteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assignes": {
+            "uniqueItems": true,
+            "description": "Comptes qui s’en occupent. **N’ouvre pas l’accès** : une carte classée demande en plus une habilitation.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "visibilite": {
+            "enum": [
+              "public",
+              "restreint",
+              "prive"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "colonneId",
+          "titre"
+        ]
+      },
+      "ModificationCarteDto": {
+        "type": "object",
+        "properties": {
+          "titre": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 4000
+          },
+          "echeance": {
+            "type": "string",
+            "format": "date"
+          },
+          "dossierId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "entiteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assignes": {
+            "uniqueItems": true,
+            "description": "Jeu complet — il remplace le précédent",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "visibilite": {
+            "enum": [
+              "public",
+              "restreint",
+              "prive"
+            ],
+            "type": "string"
+          }
+        }
+      },
+      "DeplacementCarteDto": {
+        "type": "object",
+        "properties": {
+          "colonneId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rang": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "colonneId",
+          "rang"
         ]
       },
       "SignalDto": {

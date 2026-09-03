@@ -107,6 +107,63 @@ contente de dire pourquoi.
 global (`whitelist: true`). Les valeurs de faits, dont la forme ne se connaît
 qu'à l'exécution, portent `@Allow()`.
 
+## Le type de champ « carte »
+
+Un point posé sur le plan de la centrale, **normalisé entre 0 et 1** — une
+position relative, jamais un pixel. C'est ce qui permet de changer de fond de
+carte sans déplacer un point déjà posé.
+
+`Fait.valeur` et `Entite.valeurs` étant déjà en `jsonb`, **aucune migration de
+colonne** n'a été nécessaire ; `projeter_entite` et les triggers sont agnostiques
+au type de donnée.
+
+Trois endroits, et deux où l'oubli est silencieux :
+
+1. **`ValidationDynamiqueService`** — `case TypeDonnee.carte`. Le `switch` n'a
+   pas de `default` et la méthode déclare un retour non optionnel : ajouter une
+   valeur à l'énumération **casse la compilation** tant que le cas manque. C'est
+   le filet, et le seul des trois qui en soit un.
+   Il ne retient que `x`, `y`, `typeRepereId` et `couleur` : une clé de plus,
+   venue d'un client bavard, s'installerait dans la projection sans que rien ne
+   la valide.
+   C'est aussi **le seul validateur asynchrone**, et pour une seule raison : un
+   point cite un type de repère, et vérifier qu'il existe demande la base. Le
+   faire chez les deux services appelants écrirait la règle deux fois.
+2. **`verifierCoherenceChamp`** — l'unicité est refusée sur un point.
+   `valeur_unique` indexe la forme *textuelle* d'une valeur : deux points cliqués
+   à un pixel près donneraient deux clés distinctes, et deux points confondus
+   verrouilleraient une position pour toute la centrale. Deux planques peuvent
+   partager une adresse. **Silencieux si oublié.**
+3. **`verifierTypesDuGabarit`** — un gabarit de libellé ne peut pas citer un
+   champ carte. Le libellé est le nom sous lequel la donnée apparaît partout ;
+   « Planque 0.5098 · 0.4968 » n'est pas un nom. Refusé à la configuration, où
+   l'administrateur peut corriger. **Silencieux si oublié.**
+
+### Le point porte son type et sa couleur
+
+Un point de fiche est `{x, y, typeRepereId, couleur}`. Les deux dernières clés
+sont **facultatives à l'écriture** — un point posé avant qu'elles existent reste
+un point, et un service qui n'a défini aucun type doit pouvoir en poser un —
+mais toujours **présentes à la relecture** : `typeRepereId` à `null`, `couleur`
+ramenée à l'accent. Un `undefined` qui traverse une projection finit toujours
+par surprendre quelqu'un.
+
+**`typeRepereId` n'est tenu par aucune clé étrangère** : il vit dans du `jsonb`.
+La cohérence s'établit donc à deux endroits, et il faut les deux —
+`validerTypeRepere` à l'écriture, `CarteService.verifierTypeNonCite` à la
+suppression du type. Ce second comptage porte sur **tous** les faits, y compris
+infirmés et archivés : un point qu'on a cessé de croire reste à relire.
+
+`texte_de_json` reconnaît un objet `{x, y}` et le rend
+« 0.5098 · 0.4968 ». C'est le filet du point 3, pour tous les autres chemins qui
+passent par cette fonction — sans lui, le repli sérialisait le JSON brut, ce qui
+n'est pas une erreur mais pire : c'est plausible.
+
+Le type `fichier` a le même défaut que `carte` vis-à-vis des gabarits — sa
+valeur est toujours nulle, donc il s'efface silencieusement du libellé. Il est
+antérieur, et l'ajouter au contrôle empêcherait de modifier un type qui le cite
+déjà : à traiter à part, en connaissance de cause.
+
 ## Graphe
 
 Le cache vit en mémoire, chargé au démarrage et **invalidé par événement** :
@@ -345,6 +402,98 @@ fiche qu'on ne voit pas soi-même en confirmerait l'existence.
 porte sur un fait. C'est voulu, et `test/habilitation-dossier.e2e-spec.ts` le
 fige pour que le choix reste explicite.
 
+### La carte — une différence assumée avec les dossiers
+
+Un repère suit le modèle des données : `visibilite` à trois niveaux **et**
+habilitation nominative, `predicatRepere` dans `src/visibilite/predicats.ts`.
+
+**Mais un repère classé est absent, pas muet.** Un dossier restreint montre son
+nom et tait son contenu ; un repère, non — sur une carte, **la position est le
+renseignement**. Un marqueur sans libellé à l'emplacement d'un labo dirait déjà
+l'essentiel. D'où un prédicat calqué sur celui des entités, sans étage « contenu
+lisible » : soit le repère est là, soit il n'existe pas pour cet agent.
+
+Conséquence à ne pas défaire : le front ne doit rien ajouter qui compte,
+mentionne ou signale un repère manquant.
+
+`AgentCourant` porte désormais **quatre** listes d'habilitations — dossiers,
+entités, repères — chargées à chaque requête par `garde-authentification`. Coût
+mesuré, index sur `agent_id` comme les autres.
+
+Le classement reste sous `visibilite.definir` et l'habilitation sous
+`dossier.habiliter` : on ne double pas des gestes qui existent. `carte.consulter`,
+`carte.annoter` et `carte.archiver` ne décrivent que ce que la carte ajoute.
+
+**Le retrait d'un repère est un archivage**, jamais une suppression : ce qu'on a
+cru savoir d'un terrain fait partie de l'enquête, même quand on cesse d'y croire.
+Aucune route `DELETE` sur un repère — seuls les *types* s'en vont, et seulement
+tant qu'aucun repère ne les utilise.
+
+### La géométrie d'un repère
+
+Trois formes, et pas une de plus : `{type:'point', x, y}`,
+`{type:'rectangle', a, b}`, `{type:'cercle', centre, rayon}`, en coordonnées
+normalisées entre 0 et 1. La forme doit correspondre à la **nature du type** —
+un type « QG » n'accepte pas une zone. `CarteService.validerGeometrie` est le
+seul gardien, comme `ValidationDynamiqueService` l'est pour un fait : la règle
+dépend d'une donnée connue à l'exécution, aucun décorateur ne peut la tenir.
+
+Le **polygone libre a existé et a disparu** : on le traçait sommet par sommet,
+ce que personne ne faisait, et il rendait une zone impossible à corriger. Les
+deux formes qui restent se tracent en deux clics. La migration convertit tout
+polygone survivant en son rectangle englobant — rien ne se supprime dans cette
+base, même une forme qu'on ne sait plus dessiner.
+
+**Le rectangle est rangé à l'écriture** : `a` est toujours le coin haut gauche.
+Sans ce tri, chaque lecteur devrait redécouvrir quel coin il tient.
+
+### La couleur appartient au repère, pas au type
+
+`TypeRepere` porte un code, un libellé, une nature et une icône — **pas de
+couleur**. C'est le repère qui se signale : deux planques de même sorte
+n'appellent pas la même teinte selon l'affaire, et une couleur portée par le
+type obligeait à créer un type pour changer de teinte.
+
+`Repere.couleur` est donc **obligatoire** à la pose. La migration a d'abord
+recopié la couleur du type sur les repères qui n'en imposaient pas, avant de
+faire tomber la colonne : personne ne change d'apparence.
+
+### Enquêtes — assigner n'est pas habiliter
+
+Une carte du tableau porte **deux tables d'agents**, et les confondre serait la
+faute à ne pas commettre :
+
+| | Répond à | Effet sur l'accès |
+| --- | --- | --- |
+| `AssignationCarte` | Qui s'en occupe ? | **Aucun** |
+| `HabilitationCarteEnquete` | Qui a le droit de lire ? | Franchit le gardien |
+
+Assigner un agent à une carte classée **ne la lui ouvre pas**. On confie parfois
+un travail dont le détail n'est pas encore partagé, et une assignation qui
+ouvrirait l'accès serait une porte dérobée dans le moteur de visibilité —
+d'autant plus dangereuse qu'elle passerait pour une commodité.
+
+`predicatCarteEnquete` ne connaît donc que les habilitations. Le DTO expose
+`peutLire` par assigné, pour que l'écran puisse **prévenir** — et proposer
+d'habiliter dans le même geste, jamais le faire d'office.
+
+`kanban.ecrire` couvre l'assignation : désigner qui travaille est une
+modification de la carte. L'habilitation reste sous `dossier.habiliter`.
+
+Comme les repères, une carte classée hors de portée **n'apparaît pas** — pas même
+anonyme : son titre nomme souvent ce qu'un dossier restreint protège. Et son
+retrait est un **archivage** : une carte raconte une décision de travail, et cela
+se relit.
+
+**Le déplacement réécrit les rangs des deux colonnes touchées**, en entier.
+C'est le seul moyen d'éviter les trous et les doublons quand deux agents
+déplacent en même temps ; le tableau, lui, n'envoie que la carte et sa
+destination — lui réclamer le jeu complet comme au référentiel serait pénible à
+produire au moment d'un dépôt.
+
+`AgentCourant` porte maintenant **quatre** listes d'habilitations : dossiers,
+entités, repères, cartes d'enquête.
+
 ### Les six vecteurs de fuite par déduction
 
 | Vecteur | Contre-mesure |
@@ -460,11 +609,15 @@ voulu : ses permissions sont configurables, les réécrire effacerait le travail
 de l'administrateur. Mais un geste *nouveau* au catalogue est un autre cas — un
 grade qui l'ignore perd un accès qu'il avait, sans que personne ne l'ait décidé.
 
-D'où `accorderAuxGradesExistants()`, appelée par `initialiser-production` au
-démarrage du conteneur, **bornée aux grades que l'application livre**
-(`GRADES`). Elle n'ajoute jamais deux fois et ne retire rien. Un grade créé à la
-main — un « visiteur », par exemple — reste celui de l'administrateur : ses
-zones se choisissent dans l'écran des rôles, jamais à sa place.
+D'où `alignerLesGradesLivres()`, appelée par `initialiser-production` au
+démarrage du conteneur. Elle compare **chaque grade de `GRADES` à sa ligne en
+base** et ajoute ce qui manque : ajouter une permission à `grades.ts` suffit
+donc, sans commande à ne pas oublier. Elle n'enlève jamais rien, et ne connaît
+que les grades que l'application livre — un grade créé à la main, un
+« visiteur », reste celui de l'administrateur.
+
+`accorderAuxGradesExistants()` demeure pour les cas ciblés, et sert la commande
+manuelle.
 
 `test/montee-grades.e2e-spec.ts` fige les quatre propriétés : elle rend, elle ne
 décide pas pour les grades créés à la main, elle est idempotente, elle n'enlève
@@ -556,6 +709,9 @@ en fin de course que le décompte des images correspond à la table `fichier`, e
 | 10 — Signaux | fait |
 | 11 — Traçabilité | fait |
 | 12 — Exploitation | fait |
+| 14 — Champ « carte » | fait |
+| 15 — Carte et repères | fait |
+| 16 — Enquêtes (kanban) | fait |
 
 Les lots 2 et 6 sont côté front.
 
