@@ -60,7 +60,12 @@ describe('Montée des grades au démarrage (e2e)', () => {
     }
 
     await prisma.role.create({
-      data: { code: 'visiteur', libelle: 'Visiteur', permissions: [], ordre: 9 },
+      data: {
+        code: 'visiteur',
+        libelle: 'Visiteur',
+        permissions: [],
+        ordre: 9,
+      },
     });
   });
 

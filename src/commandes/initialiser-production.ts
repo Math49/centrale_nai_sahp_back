@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import { AgentsModule } from '../agents/agents.module';
 import { AgentsService } from '../agents/agents.service';
-import { CODE_ETAT_MAJOR, CONSULTATION, GRADES } from '../agents/grades';
+import { CODE_ETAT_MAJOR } from '../agents/grades';
 import { RolesService } from '../agents/roles.service';
 import { AppModule } from '../app.module';
 import { LONGUEUR_MINIMALE_MOT_DE_PASSE } from '../auth/auth.dto';
@@ -69,17 +69,13 @@ async function executer(): Promise<void> {
      * `initialiserLesGradesManquants` ne touche jamais un grade existant, et
      * c'est voulu : ses permissions sont configurables. Mais l'ajout d'un geste
      * *nouveau* au catalogue est un autre cas — un grade qui l'ignore perd un
-     * acces qu'il avait, sans que personne ne l'ait decide. Sans cette montee,
-     * le passage de la lecture en permission fermerait tous les ecrans a tout
-     * le monde au premier demarrage.
+     * acces qu'il aurait du avoir, sans que personne ne l'ait decide.
      *
      * Bornee aux grades que l'application livre : un grade cree a la main —
      * un « visiteur », par exemple — reste celui de l'administrateur, et ses
      * zones se choisissent dans l'ecran des roles.
      */
-    const montes = await roles.accorderAuxGradesExistants(CONSULTATION, {
-      seulement: GRADES.map((grade) => grade.code),
-    });
+    const montes = await roles.alignerLesGradesLivres();
 
     for (const ligne of montes) {
       dire(`${ligne.code} <- ${ligne.ajoutees.join(', ')}`);

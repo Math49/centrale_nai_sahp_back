@@ -14,6 +14,8 @@ export interface ContexteVisibilite {
 
   dossiersHabilites: readonly string[];
   entitesHabilitees: readonly string[];
+  reperesHabilites: readonly string[];
+  cartesHabilitees: readonly string[];
 }
 
 export function contexteDe(agent: AgentCourant): ContexteVisibilite {
@@ -28,6 +30,8 @@ export function contexteDe(agent: AgentCourant): ContexteVisibilite {
     ),
     dossiersHabilites: agent.dossiersHabilites,
     entitesHabilitees: agent.entitesHabilitees,
+    reperesHabilites: agent.reperesHabilites,
+    cartesHabilitees: agent.cartesHabilitees,
   };
 }
 

@@ -655,6 +655,8 @@ describe('Lot 5 — visibilité (e2e)', () => {
       permissions: [],
       dossiersHabilites: [],
       entitesHabilitees: [],
+      reperesHabilites: [],
+      cartesHabilitees: [],
     };
   }
 });

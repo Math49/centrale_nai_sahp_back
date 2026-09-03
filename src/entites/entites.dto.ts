@@ -3,6 +3,7 @@ import {
   ApiPropertyOptional,
   type ApiPropertyOptions,
 } from '@nestjs/swagger';
+import type { SchemaObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import { EtatEntite, TypeDonnee, Visibilite } from '@prisma/client';
 
 import { AgentHabiliteDto, RattachementDto } from '../dossiers/dossiers.dto';
@@ -52,6 +53,31 @@ export class ProvenanceDto {
   visibilite?: Visibilite;
 }
 
+/**
+ * Schéma d'un point de carte, pour le contrat OpenAPI.
+ *
+ * Déclaré une fois et réutilisé : sans lui, le contrat annoncerait seulement
+ * « texte, nombre ou booléen » et le client typé du front n'aurait aucune idée
+ * qu'un objet peut arriver là. La contrainte réelle est tenue par
+ * `ValidationDynamiqueService`, qui refuse tout ce qui n'est pas un point sur
+ * un champ de type carte — ceci n'est que la description.
+ */
+/** Un point du plan, en coordonnées normalisées. */
+export interface PointCarte {
+  x: number;
+  y: number;
+}
+
+export const SCHEMA_POINT: SchemaObject = {
+  type: 'object',
+  description: 'Point de carte, coordonnées normalisées entre 0 et 1',
+  properties: {
+    x: { type: 'number', minimum: 0, maximum: 1 },
+    y: { type: 'number', minimum: 0, maximum: 1 },
+  },
+  required: ['x', 'y'],
+} as const;
+
 export class ChampSaisiDto extends ProvenanceDto {
   @ApiProperty({ format: 'uuid' })
   @IsUUID()
@@ -59,11 +85,16 @@ export class ChampSaisiDto extends ProvenanceDto {
 
   @Allow()
   @ApiProperty({
-    oneOf: [{ type: 'string' }, { type: 'number' }, { type: 'boolean' }],
+    oneOf: [
+      { type: 'string' },
+      { type: 'number' },
+      { type: 'boolean' },
+      SCHEMA_POINT,
+    ],
     description:
-      'Texte, nombre, booléen ou valeur de liste, selon le type du champ',
+      'Texte, nombre, booléen, valeur de liste ou point de carte, selon le type du champ',
   })
-  valeur!: string | number | boolean;
+  valeur!: string | number | boolean | PointCarte;
 }
 
 export class LienSaisiDto extends ProvenanceDto {
@@ -141,6 +172,7 @@ const VALEUR_LUE: ApiPropertyOptions = {
     { type: 'string' },
     { type: 'number' },
     { type: 'boolean' },
+    SCHEMA_POINT,
     { type: 'array', items: {} },
   ],
 };

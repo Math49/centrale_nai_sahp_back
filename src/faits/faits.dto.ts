@@ -14,7 +14,12 @@ import {
   MinLength,
 } from 'class-validator';
 
-import { FIABILITE_MAX, FIABILITE_MIN } from '../entites/entites.dto';
+import {
+  FIABILITE_MAX,
+  FIABILITE_MIN,
+  SCHEMA_POINT,
+  type PointCarte,
+} from '../entites/entites.dto';
 
 export class CreationFaitDto {
   @ApiProperty({ format: 'uuid' })
@@ -32,11 +37,16 @@ export class CreationFaitDto {
 
   @Allow()
   @ApiPropertyOptional({
-    oneOf: [{ type: 'string' }, { type: 'number' }, { type: 'boolean' }],
+    oneOf: [
+      { type: 'string' },
+      { type: 'number' },
+      { type: 'boolean' },
+      SCHEMA_POINT,
+    ],
     description: 'Si nature = champ',
   })
   @IsOptional()
-  valeur?: string | number | boolean;
+  valeur?: string | number | boolean | PointCarte;
 
   @ApiPropertyOptional({ format: 'uuid', description: 'Si nature = lien' })
   @IsOptional()
@@ -81,11 +91,16 @@ export class CreationFaitDto {
 export class ModificationFaitDto {
   @Allow()
   @ApiPropertyOptional({
-    oneOf: [{ type: 'string' }, { type: 'number' }, { type: 'boolean' }],
+    oneOf: [
+      { type: 'string' },
+      { type: 'number' },
+      { type: 'boolean' },
+      SCHEMA_POINT,
+    ],
     description: 'Champ seulement — la cible d’un lien ne se corrige pas',
   })
   @IsOptional()
-  valeur?: string | number | boolean;
+  valeur?: string | number | boolean | PointCarte;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -134,6 +149,7 @@ export class FaitDto {
       { type: 'string' },
       { type: 'number' },
       { type: 'boolean' },
+      SCHEMA_POINT,
       { type: 'array', items: {} },
     ],
   })

@@ -1,3 +1,7 @@
+-- Migration générée depuis prisma/sql/ par scripts/creer-migration-sql.mjs.
+-- Ne pas modifier ici : corriger le fichier source puis créer une nouvelle migration.
+
+-- source : prisma/sql/fonctions/texte_de_json.sql
 CREATE OR REPLACE FUNCTION texte_de_json(p_valeur jsonb)
 RETURNS text AS $$
 BEGIN

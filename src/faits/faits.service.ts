@@ -87,7 +87,7 @@ export class FaitsService {
       }
 
       data.definitionChampId = definition.id;
-      data.valeur = this.validation.valider(definition, donnees.valeur);
+      data.valeur = await this.validation.valider(definition, donnees.valeur);
     } else {
       if (!donnees.typeLienId || !donnees.cibleId) {
         throw new BadRequestException('lien incomplet');
@@ -192,7 +192,7 @@ export class FaitsService {
           'seule la valeur d’un champ se modifie ; un lien mal posé s’infirme',
         );
       }
-      data.valeur = this.validation.valider(
+      data.valeur = await this.validation.valider(
         avant.definitionChamp,
         donnees.valeur,
       );

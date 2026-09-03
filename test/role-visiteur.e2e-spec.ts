@@ -140,10 +140,7 @@ describe('Grade sans permission (e2e)', () => {
   });
 
   it('un grade sans geste de lecture n’ouvre plus aucun écran', async () => {
-    await request(serveur)
-      .get('/entites')
-      .set(enTantQue(muet))
-      .expect(403);
+    await request(serveur).get('/entites').set(enTantQue(muet)).expect(403);
 
     await request(serveur).get('/dossiers').set(enTantQue(muet)).expect(403);
     await request(serveur)

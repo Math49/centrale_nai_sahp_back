@@ -132,6 +132,56 @@ export class RolesService {
    * l'application* ce qu'un nouveau geste vient de lui retirer, et on ne décide
    * jamais à la place de l'administrateur pour un grade qu'il a créé lui-même.
    */
+  /**
+   * Rend à chaque grade livré ce que sa définition lui accorde.
+   *
+   * `initialiserLesGradesManquants` ne touche jamais un grade existant — ses
+   * permissions sont configurables, les réécrire effacerait le travail de
+   * l'administrateur. Mais un geste **nouveau au catalogue** est un autre cas :
+   * le grade qui l'ignore perd un accès qu'il aurait dû avoir, sans que
+   * personne ne l'ait décidé.
+   *
+   * Cette montée compare chaque grade de `GRADES` à sa ligne en base et ajoute
+   * ce qui manque. Elle n'enlève jamais rien, et ne connaît que les grades que
+   * l'application livre : un grade créé à la main — un « visiteur » — reste
+   * celui de l'administrateur.
+   *
+   * Appelée au démarrage du conteneur. C'est ce qui fait qu'ajouter une
+   * permission à `grades.ts` suffit, sans commande à ne pas oublier.
+   */
+  async alignerLesGradesLivres(): Promise<
+    { code: string; ajoutees: string[] }[]
+  > {
+    const rapport: { code: string; ajoutees: string[] }[] = [];
+
+    for (const grade of GRADES) {
+      const ligne = await this.prisma.role.findUnique({
+        where: { code: grade.code },
+      });
+
+      if (!ligne) {
+        continue;
+      }
+
+      const ajoutees = grade.permissions.filter(
+        (permission) => !ligne.permissions.includes(permission),
+      );
+
+      if (ajoutees.length === 0) {
+        continue;
+      }
+
+      await this.prisma.role.update({
+        where: { id: ligne.id },
+        data: { permissions: [...ligne.permissions, ...ajoutees] },
+      });
+
+      rapport.push({ code: grade.code, ajoutees: [...ajoutees] });
+    }
+
+    return rapport;
+  }
+
   async accorderAuxGradesExistants(
     codes: readonly string[],
     options: {
