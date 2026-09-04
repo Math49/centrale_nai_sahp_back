@@ -1,18 +1,23 @@
 import {
   Body,
   Controller,
+  DefaultValuePipe,
   Delete,
   Get,
   HttpCode,
   HttpStatus,
   Param,
+  ParseBoolPipe,
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
+import { EtatEntite } from '@prisma/client';
 import {
   ApiBearerAuth,
   ApiOperation,
+  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
@@ -44,9 +49,19 @@ export class DossiersController {
     description:
       'Les dossiers privés en sont absents, sans mention. Le décompte des entités suivies ne compte que le visible.',
   })
+  @ApiQuery({
+    name: 'archives',
+    required: false,
+    type: Boolean,
+    description: 'Inclure les dossiers archivés. Faux par défaut.',
+  })
   @ApiResponse({ status: 200, type: [DossierResumeDto] })
-  lister(@Agent() agent: AgentCourant): Promise<DossierResumeDto[]> {
-    return this.dossiers.lister(agent);
+  lister(
+    @Agent() agent: AgentCourant,
+    @Query('archives', new DefaultValuePipe(false), ParseBoolPipe)
+    archives: boolean,
+  ): Promise<DossierResumeDto[]> {
+    return this.dossiers.lister(agent, { archives });
   }
 
   @Get(':id')
@@ -97,6 +112,33 @@ export class DossiersController {
     @Body() corps: ModificationDossierDto,
   ): Promise<PanneauDossierDto> {
     return this.dossiers.modifier(agent, id, corps);
+  }
+
+  @Post(':id/archiver')
+  @Permissions(PERMISSIONS.DOSSIER_ARCHIVER)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Archivage',
+    description:
+      'Rien n’est jamais supprimé : le dossier sort des écrans courants et reste entier — son suivi, ses habilitations, et les faits qui le citent comme dossier de saisie.',
+  })
+  @ApiResponse({ status: 200, type: PanneauDossierDto })
+  archiver(
+    @Agent() agent: AgentCourant,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<PanneauDossierDto> {
+    return this.dossiers.changerEtat(agent, id, EtatEntite.archive);
+  }
+
+  @Post(':id/desarchiver')
+  @Permissions(PERMISSIONS.DOSSIER_ARCHIVER)
+  @HttpCode(HttpStatus.OK)
+  @ApiResponse({ status: 200, type: PanneauDossierDto })
+  desarchiver(
+    @Agent() agent: AgentCourant,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<PanneauDossierDto> {
+    return this.dossiers.changerEtat(agent, id, EtatEntite.actif);
   }
 
   @Post(':id/suivi')
