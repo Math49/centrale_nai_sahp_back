@@ -1823,7 +1823,17 @@
       "get": {
         "description": "Les dossiers privés en sont absents, sans mention. Le décompte des entités suivies ne compte que le visible.",
         "operationId": "DossiersController_lister",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "archives",
+            "required": false,
+            "in": "query",
+            "description": "Inclure les dossiers archivés. Faux par défaut.",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -1950,6 +1960,78 @@
             }
           }
         },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PanneauDossierDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "tags": [
+          "dossiers"
+        ]
+      }
+    },
+    "/dossiers/{id}/archiver": {
+      "post": {
+        "description": "Rien n’est jamais supprimé : le dossier sort des écrans courants et reste entier — son suivi, ses habilitations, et les faits qui le citent comme dossier de saisie.",
+        "operationId": "DossiersController_archiver",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PanneauDossierDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jeton": []
+          }
+        ],
+        "summary": "Archivage",
+        "tags": [
+          "dossiers"
+        ]
+      }
+    },
+    "/dossiers/{id}/desarchiver": {
+      "post": {
+        "operationId": "DossiersController_desarchiver",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",

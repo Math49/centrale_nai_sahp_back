@@ -28,6 +28,18 @@ export const PERMISSIONS = {
 
   DOSSIER_CREER: 'dossier.creer',
   DOSSIER_MODIFIER: 'dossier.modifier',
+
+  /**
+   * Retirer un dossier des écrans courants, ou l'y remettre.
+   *
+   * Un seul code pour les deux sens, comme `carte.archiver` et
+   * `kanban.archiver` : rouvrir une enquête close n'est pas un geste d'une
+   * autre portée que la clore. Séparé de `dossier.modifier` en revanche —
+   * renommer un dossier et le sortir de la circulation ne se confondent pas,
+   * et c'est le partage que les entités font déjà.
+   */
+  DOSSIER_ARCHIVER: 'dossier.archiver',
+
   DOSSIER_HABILITER: 'dossier.habiliter',
 
   VISIBILITE_DEFINIR: 'visibilite.definir',
@@ -89,6 +101,7 @@ export const LIBELLES_PERMISSIONS: Record<Permission, string> = {
   [PERMISSIONS.FAIT_INFIRMER]: 'Infirmer un fait',
   [PERMISSIONS.DOSSIER_CREER]: 'Créer un dossier',
   [PERMISSIONS.DOSSIER_MODIFIER]: 'Modifier un dossier',
+  [PERMISSIONS.DOSSIER_ARCHIVER]: 'Archiver un dossier, ou le réactiver',
   [PERMISSIONS.DOSSIER_HABILITER]:
     'Habiliter un agent sur un dossier ou une donnée',
   [PERMISSIONS.VISIBILITE_DEFINIR]: 'Classer un objet en restreint ou privé',

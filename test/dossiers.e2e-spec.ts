@@ -381,6 +381,79 @@ describe('Lot 8 — dossiers (e2e)', () => {
     });
   });
 
+  describe('archivage — le dossier sort des écrans, pas de la base', () => {
+    const lister = async (compte: Compte, archives = false) =>
+      (
+        await request(serveur)
+          .get(`/dossiers${archives ? '?archives=true' : ''}`)
+          .set(enTantQue(compte))
+          .expect(200)
+      ).body as DossierResumeDto[];
+
+    it('relève d’un geste distinct de « modifier »', async () => {
+      // Le junior porte `dossier.modifier` et pas `dossier.archiver` : renommer
+      // un dossier et le sortir de la circulation ne se confondent pas.
+      await request(serveur)
+        .post(`/dossiers/${idDossierMadrina}/archiver`)
+        .set(enTantQue(junior))
+        .expect(403);
+    });
+
+    it('retire le dossier de la liste courante, sans rien lui prendre', async () => {
+      const avant = await panneau(senior, idDossierMadrina);
+      expect(avant.suivis.length).toBeGreaterThan(0);
+
+      const apres = (
+        await request(serveur)
+          .post(`/dossiers/${idDossierMadrina}/archiver`)
+          .set(enTantQue(senior))
+          .expect(200)
+      ).body as PanneauDossierDto;
+
+      expect(apres.etat).toBe('archive');
+
+      const courants = await lister(senior);
+      expect(courants.map((dossier) => dossier.id)).not.toContain(
+        idDossierMadrina,
+      );
+
+      // Ce qui compte : le dossier reste entier. Son suivi, ses habilitations
+      // et les faits qui le citent tiennent leur visibilité de lui.
+      const relu = await panneau(senior, idDossierMadrina);
+      expect(relu.suivis.length).toBe(avant.suivis.length);
+      expect(relu.nom).toBe(avant.nom);
+    });
+
+    it('se retrouve en le demandant', async () => {
+      const avecArchives = await lister(senior, true);
+
+      expect(avecArchives.map((dossier) => dossier.id)).toContain(
+        idDossierMadrina,
+      );
+    });
+
+    it('refuse d’archiver deux fois', async () => {
+      await request(serveur)
+        .post(`/dossiers/${idDossierMadrina}/archiver`)
+        .set(enTantQue(senior))
+        .expect(409);
+    });
+
+    it('se réactive, et revient dans la liste', async () => {
+      const apres = (
+        await request(serveur)
+          .post(`/dossiers/${idDossierMadrina}/desarchiver`)
+          .set(enTantQue(senior))
+          .expect(200)
+      ).body as PanneauDossierDto;
+
+      expect(apres.etat).toBe('actif');
+
+      const courants = await lister(senior);
+      expect(courants.map((dossier) => dossier.id)).toContain(idDossierMadrina);
+    });
+  });
+
   describe('dossier restreint — objet visible, contenu fermé', () => {
     beforeAll(async () => {
       await request(serveur)

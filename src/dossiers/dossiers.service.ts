@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, Visibilite, type Dossier } from '@prisma/client';
+import { EtatEntite, Prisma, Visibilite, type Dossier } from '@prisma/client';
 
 import type { AgentCourant } from '../auth/agent-courant';
 import { JournalAuditService } from '../journal/journal-audit.service';
@@ -265,10 +265,21 @@ export class DossiersService {
     }));
   }
 
-  async lister(agent: AgentCourant): Promise<DossierResumeDto[]> {
+  /**
+   * Les dossiers visibles.
+   *
+   * Les archivés en sont **exclus par défaut** : un dossier archivé est une
+   * enquête close, et la laisser dans la liste courante ferait grossir l'écran
+   * de ce qu'on ne cherche plus. Elle reste consultable en le demandant.
+   */
+  async lister(
+    agent: AgentCourant,
+    options: { archives?: boolean } = {},
+  ): Promise<DossierResumeDto[]> {
     const client = this.visibilite.clientPour(agent);
 
     const dossiers = await client.dossier.findMany({
+      where: options.archives ? {} : { etat: EtatEntite.actif },
       include: { entitePivot: true },
       orderBy: { creeLe: 'desc' },
     });
@@ -403,6 +414,55 @@ export class DossiersService {
       .catch((erreur: unknown) => {
         throw this.traduireNomEnDouble(erreur);
       });
+
+    this.bus.signaler();
+    return this.panneau(agent, id);
+  }
+
+  /**
+   * Archivage d'un dossier — jamais une suppression.
+   *
+   * Le dossier sort des écrans courants et **reste entier** : son suivi, ses
+   * habilitations, et surtout les faits qui le citent comme dossier de saisie,
+   * dont ils tiennent leur visibilité. Rien ne se détache, rien ne se déclasse.
+   *
+   * Un dossier archivé se lit encore, et s'écrit encore : c'est déjà la règle
+   * des entités, dont l'archivage n'a jamais fermé la saisie. Deux comportements
+   * différents pour le même mot seraient impossibles à retenir.
+   */
+  async changerEtat(
+    agent: AgentCourant,
+    id: string,
+    etat: EtatEntite,
+  ): Promise<PanneauDossierDto> {
+    await this.visibilite.dossierVisibleOuIntrouvable(agent, id);
+
+    const avant = await this.charger(id);
+
+    if (avant.etat === etat) {
+      throw new ConflictException(
+        etat === EtatEntite.archive ? 'déjà archivé' : 'déjà actif',
+      );
+    }
+
+    await this.prisma.$transaction(async (transaction) => {
+      await transaction.dossier.update({ where: { id }, data: { etat } });
+
+      await this.audit.tracer(
+        {
+          agentId: agent.id,
+          action:
+            etat === EtatEntite.archive
+              ? 'dossier.archiver'
+              : 'dossier.desarchiver',
+          cibleTable: 'dossier',
+          cibleId: id,
+          avant: { etat: avant.etat },
+          apres: { etat },
+        },
+        transaction,
+      );
+    });
 
     this.bus.signaler();
     return this.panneau(agent, id);

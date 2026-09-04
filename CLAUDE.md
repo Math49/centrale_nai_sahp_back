@@ -164,6 +164,31 @@ valeur est toujours nulle, donc il s'efface silencieusement du libellé. Il est
 antérieur, et l'ajouter au contrôle empêcherait de modifier un type qui le cite
 déjà : à traiter à part, en connaissance de cause.
 
+## Ce qui se reprend sur un fait
+
+`PATCH /faits/:id` distingue la **valeur** du fait de ce qu'on en sait.
+
+La valeur ne se modifie que sur un **champ** : « un lien mal posé s'infirme »,
+et l'API le refuse en 400. La source, la fiabilité, la date de constatation et
+la visibilité, elles, se reprennent sur **les deux natures** — ce sont des
+métadonnées du fait, pas son contenu. Un lien bien posé mais mal noté n'a jamais
+eu besoin d'être infirmé ; c'est l'écran qui n'en offrait pas le geste.
+
+## Archivage d'un dossier
+
+`POST /dossiers/:id/archiver` et `/desarchiver`, sous `dossier.archiver` — un
+geste distinct de `dossier.modifier`, comme `entite.archiver` l'est de
+`entite.modifier` : on peut renommer une enquête sans avoir le droit de la clore.
+Un seul code pour les deux sens, comme `carte.archiver`.
+
+Le dossier archivé **quitte `GET /dossiers` mais rien d'autre** : son suivi, ses
+habilitations et les faits qui le citent comme dossier de saisie restent
+intacts, et il en reste le gardien. `?archives=true` le rend à la liste.
+
+**Un dossier archivé se lit et s'écrit encore**, comme une entité archivée :
+l'archivage n'a jamais fermé la saisie de ce côté-ci, et deux comportements
+différents pour le même mot seraient impossibles à retenir.
+
 ## Graphe
 
 Le cache vit en mémoire, chargé au démarrage et **invalidé par événement** :

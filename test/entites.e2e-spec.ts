@@ -296,6 +296,70 @@ describe('Lot 4 — entités et faits (e2e)', () => {
       expect(fiche.liens[0].autreEntite.libelle).toBe('Tyron Banks');
     });
 
+    it('reprend la fiabilité du lien sans en changer la forme', async () => {
+      // Un lien mal posé s'infirme ; un lien bien posé mais mal noté se
+      // reprend. La fiabilité, la source et la date sont des métadonnées du
+      // fait — c'est sa *valeur* que la nature « lien » interdit de toucher.
+      const avant = (
+        await request(serveur)
+          .get(`/entites/${idPersonne}`)
+          .set(enTantQue(junior))
+          .expect(200)
+      ).body as FicheEntiteDto;
+
+      const lien = avant.liens[0];
+
+      await request(serveur)
+        .patch(`/faits/${lien.faitId}`)
+        .set(enTantQue(junior))
+        .send({ fiabilite: 2, source: 'Recoupement du 12/08' })
+        .expect(200);
+
+      const apres = (
+        await request(serveur)
+          .get(`/entites/${idPersonne}`)
+          .set(enTantQue(junior))
+          .expect(200)
+      ).body as FicheEntiteDto;
+
+      expect(apres.liens).toHaveLength(1);
+      expect(apres.liens[0]).toMatchObject({
+        faitId: lien.faitId,
+        fiabilite: 2,
+        source: 'Recoupement du 12/08',
+        libelle: 'propriétaire de',
+      });
+      expect(apres.liens[0].autreEntite.id).toBe(lien.autreEntite.id);
+    });
+
+    it('se relit corrigé depuis l’autre extrémité — une seule arête', async () => {
+      const depuisVehicule = (
+        await request(serveur)
+          .get(`/entites/${idVehicule}`)
+          .set(enTantQue(junior))
+          .expect(200)
+      ).body as FicheEntiteDto;
+
+      expect(depuisVehicule.liens[0].fiabilite).toBe(2);
+    });
+
+    it('refuse toujours d’en changer la valeur', async () => {
+      const fiche = (
+        await request(serveur)
+          .get(`/entites/${idPersonne}`)
+          .set(enTantQue(junior))
+          .expect(200)
+      ).body as FicheEntiteDto;
+
+      const refus = await request(serveur)
+        .patch(`/faits/${fiche.liens[0].faitId}`)
+        .set(enTantQue(junior))
+        .send({ valeur: 'ailleurs' })
+        .expect(400);
+
+      expect((refus.body as { message: string }).message).toMatch(/s’infirme/);
+    });
+
     it('désigne le même fait des deux côtés', async () => {
       const [depuisPersonne, depuisVehicule] = await Promise.all([
         request(serveur)
